@@ -5,7 +5,7 @@ final class GameTests: XCTestCase {
     func testCreateGameReturnsCreated() async throws {
         try await withApp { app in
             try await app.test(.POST, "games", beforeRequest: { req in
-                try req.content.encode(CreateGameDTO(
+                try req.content.encode(GameInputDTO(
                     title: "Catan", minPlayers: 3, maxPlayers: 4, durationMinutes: 90
                 ))
             }, afterResponse: { res async throws in
@@ -20,7 +20,7 @@ final class GameTests: XCTestCase {
     func testCreateGameWithEmptyTitleIsRejected() async throws {
         try await withApp { app in
             try await app.test(.POST, "games", beforeRequest: { req in
-                try req.content.encode(CreateGameDTO(
+                try req.content.encode(GameInputDTO(
                     title: "", minPlayers: 3, maxPlayers: 4, durationMinutes: 90
                 ))
             }, afterResponse: { res async throws in
@@ -32,8 +32,53 @@ final class GameTests: XCTestCase {
     func testCreateGameWithInvertedPlayerBoundsIsRejected() async throws {
         try await withApp { app in
             try await app.test(.POST, "games", beforeRequest: { req in
-                try req.content.encode(CreateGameDTO(
+                try req.content.encode(GameInputDTO(
                     title: "Catan", minPlayers: 5, maxPlayers: 2, durationMinutes: 90
+                ))
+            }, afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+    
+    func testCreateGameWithInvalidMinPlayersIsRejected() async throws {
+        try await withApp { app in
+            try await app.test(.POST, "games", beforeRequest: { req in
+                try req.content.encode(GameInputDTO(
+                    title: "Catan",
+                    minPlayers: 0,
+                    maxPlayers: 4,
+                    durationMinutes: 90
+                ))
+            }, afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+    
+    func testCreateGameWithInvalidMaxPlayersIsRejected() async throws {
+        try await withApp { app in
+            try await app.test(.POST, "games", beforeRequest: { req in
+                try req.content.encode(GameInputDTO(
+                    title: "Catan",
+                    minPlayers: 1,
+                    maxPlayers: 0,
+                    durationMinutes: 90
+                ))
+            }, afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+    
+    func testCreateGameWithInvalidDurationMinutesIsRejected() async throws {
+        try await withApp { app in
+            try await app.test(.POST, "games", beforeRequest: { req in
+                try req.content.encode(GameInputDTO(
+                    title: "Catan",
+                    minPlayers: 2,
+                    maxPlayers: 4,
+                    durationMinutes: 0
                 ))
             }, afterResponse: { res async throws in
                 XCTAssertEqual(res.status, .badRequest)
@@ -78,6 +123,167 @@ final class GameTests: XCTestCase {
             try await app.test(.GET, "games/not-a-uuid", afterResponse: { res async throws in
                 XCTAssertEqual(res.status, .badRequest)
             })
+        }
+    }
+    
+    func testUpdateGameReturnsOk() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app, title: "Quasi Veniam")
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 2,
+                maxPlayers: 8,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/\(testGameID)") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                
+                let output = try res.content.decode(GameDTO.self)
+                
+                XCTAssertEqual(output.title, input.title)
+                XCTAssertEqual(output.minPlayers, input.minPlayers)
+                XCTAssertEqual(output.maxPlayers, input.maxPlayers)
+                XCTAssertEqual(output.durationMinutes, input.durationMinutes)
+            }
+        }
+    }
+    
+    func testUpdateGameWithEmptyTitleIsRejected() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app, title: "Quasi Veniam")
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            let input = GameInputDTO(
+                title: "",
+                minPlayers: 2,
+                maxPlayers: 8,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/\(testGameID)") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+    
+    func testUpdateGameWithInvertedPlayerBoundsIsRejected() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app, title: "Quasi Veniam")
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 4,
+                maxPlayers: 2,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/\(testGameID)") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+    
+    func testUpdateGameWithInvalidMinPlayersIsRejected() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app, title: "Quasi Veniam")
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 0,
+                maxPlayers: 4,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/\(testGameID)") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+    
+    func testUpdateGameWithInvalidMaxPlayersIsRejected() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app, title: "Quasi Veniam")
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 1,
+                maxPlayers: 0,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/\(testGameID)") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+    
+    func testUpdateGameWithInvalidDurationMinutesIsRejected() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app, title: "Quasi Veniam")
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 2,
+                maxPlayers: 4,
+                durationMinutes: 0
+            )
+            
+            try await app.test(.PUT, "games/\(testGameID)") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
+        }
+    }
+    
+    func testUpdateUnknownGameReturnsNotFound() async throws {
+        try await withApp { app in
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 2,
+                maxPlayers: 8,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/\(UUID())") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .notFound)
+            }
+        }
+    }
+    
+    func testUpdateGameWithMalformedIDReturnsBadRequest() async throws {
+        try await withApp { app in
+            let input = GameInputDTO(
+                title: "Reprehenderit Et Quis",
+                minPlayers: 2,
+                maxPlayers: 8,
+                durationMinutes: 60
+            )
+            
+            try await app.test(.PUT, "games/not-a-uuid") { req in
+                try req.content.encode(input)
+            } afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            }
         }
     }
 

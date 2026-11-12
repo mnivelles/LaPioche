@@ -1,6 +1,6 @@
 import Vapor
 
-struct CreateGameDTO: Content, Validatable {
+struct GameInputDTO: Content, Validatable {
     let title: String
     let minPlayers: Int
     let maxPlayers: Int

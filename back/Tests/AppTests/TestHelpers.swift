@@ -22,7 +22,7 @@ func createGame(
 ) async throws -> GameDTO {
     var game: GameDTO?
     try await app.test(.POST, "games", beforeRequest: { req in
-        try req.content.encode(CreateGameDTO(
+        try req.content.encode(GameInputDTO(
             title: title,
             minPlayers: minPlayers,
             maxPlayers: maxPlayers,
