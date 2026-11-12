@@ -286,6 +286,89 @@ final class GameTests: XCTestCase {
             }
         }
     }
+    
+    func testDeleteGameReturnsNoContent() async throws {
+        try await withApp { app in
+            let testGame = try await createGame(app)
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            try await app.test(.DELETE, "games/\(testGameID)",
+                               afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .noContent)
+            })
+            
+            let found = try await Game.find(testGameID,
+                                            on: app.db)
+            
+            XCTAssertNil(found)
+        }
+    }
+    
+    func testDeleteGameUnknownGameReturnsNotFound() async throws {
+        try await withApp { app in
+            try await app.test(.DELETE, "games/\(UUID())",
+                               afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .notFound)
+            })
+        }
+    }
+    
+    func testDeleteGameWithLoansReturnsConflict() async throws {
+        try await withApp { app in
+            let testMember = try await createMember(app)
+            let testMemberID = try XCTUnwrap(testMember.id)
+            
+            let testGame = try await createGame(app)
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            try await insertLoan(
+                app,
+                gameID: testGameID,
+                memberID: testMemberID,
+                borrowedAt: .now,
+                dueAt: .distantFuture
+            )
+            
+            try await app.test(.DELETE, "games/\(testGameID)",
+                               afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .conflict)
+            })
+            
+            let found = try await Game.find(testGameID,
+                                            on: app.db)
+            
+            XCTAssertNotNil(found)
+        }
+    }
+    
+    func testDeleteReturnedGameReturnsConflict() async throws {
+        try await withApp { app in
+            let testMember = try await createMember(app)
+            let testMemberID = try XCTUnwrap(testMember.id)
+            
+            let testGame = try await createGame(app)
+            let testGameID = try XCTUnwrap(testGame.id)
+            
+            try await insertLoan(
+                app,
+                gameID: testGameID,
+                memberID: testMemberID,
+                borrowedAt: .distantPast,
+                dueAt: .distantPast,
+                returnedAt: .now
+            )
+            
+            try await app.test(.DELETE, "games/\(testGameID)",
+                               afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .conflict)
+            })
+            
+            let found = try await Game.find(testGameID,
+                                            on: app.db)
+            
+            XCTAssertNotNil(found)
+        }
+    }
 
     func testPreflightRequestFromAnotherOriginIsAllowed() async throws {
         try await withApp { app in
