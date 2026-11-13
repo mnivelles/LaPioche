@@ -110,14 +110,14 @@ function gameCard(game) {
 
   const actions = el("div", { class: "actions" });
 
-  actions.append(button("Modifier", () => openGameUpdateDialog(game), null));
+  actions.append(button("Modifier", () => openGameUpdateDialog(game)));
 
   if (game.isAvailable) {
     actions.append(
       button("Emprunter", () => openBorrowDialog(game), "primary"),
     );
   } else {
-    actions.append(button("Rendre", () => openReturnGameDialog(game), null));
+    actions.append(button("Rendre", () => openReturnGameDialog(game)));
   }
 
   actions.append(

@@ -25,10 +25,24 @@ const dixit = {
 };
 const camille = { id: "m1", name: "Camille", email: "camille@example.com" };
 
+const dixitLoan = {
+  id: "l1",
+  gameID: "g2",
+  memberID: "m1",
+  borrowedAt: "2026-11-01T10:00:00Z",
+  dueAt: "2026-11-15T10:00:00Z",
+  returnedAt: null,
+};
+
 const cardOf = (app, title) =>
   app
     .$$("#games-list .card")
     .find((card) => card.querySelector("h3").textContent === title);
+
+const rowOf = (app, title) =>
+  app
+    .$$("#members-list .row")
+    .find((row) => row.querySelector("p strong").textContent === title);
 
 // Remplace toute suite d'espaces ou de retours à la ligne par un seul espace,
 // comme le fait l'affichage dans le navigateur.
@@ -130,7 +144,7 @@ test("updating a game sends the form then reloads the list", async () => {
   let games = [catan];
   const updated = {
     ...catan,
-    title: "Lorem",
+    title: "Corino Senti",
     minPlayers: 7,
     maxPlayers: 9,
     durationMinutes: 35,
@@ -143,9 +157,9 @@ test("updating a game sends the form then reloads the list", async () => {
     },
   });
   await waitFor(() => app.$$("#games-list .card").length === 1);
-  app.click("Modifier");
+  app.click("Modifier", cardOf(app, "Catan"));
   const form = app.$("#game-update-form");
-  form.elements.title.value = "  Lorem ";
+  form.elements.title.value = "  Corino Senti ";
   form.elements.minPlayers.value = "7";
   form.elements.maxPlayers.value = "9";
   form.elements.durationMinutes.value = "35";
@@ -158,15 +172,16 @@ test("updating a game sends the form then reloads the list", async () => {
     "l'appel PUT /games/g1",
   );
   assertEqual(app.calls.find((call) => call.method === "PUT").body, {
-    title: "Lorem",
+    title: "Corino Senti",
     minPlayers: 7,
     maxPlayers: 9,
     durationMinutes: 35,
   });
   await waitFor(() => !app.$("#game-update-dialog").open, "la boîte se ferme");
-  await waitFor(
-    () => app.$("#games-list .card").textContent.includes("Lorem"),
-    "la carte affiche le nouveau titre après rechargement",
+  assertIncludes(cardOf(app, "Corino Senti").textContent, "Corino Senti");
+  assertIncludes(
+    cardOf(app, "Corino Senti").textContent,
+    "7 à 9 joueur·ses · 35 min",
   );
 });
 
@@ -182,7 +197,7 @@ test("updating a game, a validation error is shown in French and the dialog stay
     ],
   });
   await waitFor(() => app.$$("#games-list .card").length === 1);
-  app.click("Modifier");
+  app.click("Modifier", cardOf(app, "Catan"));
   const form = app.$("#game-update-form");
   form.requestSubmit();
   await waitFor(
@@ -209,7 +224,7 @@ test("deleting a game remove it then reloads the list", async () => {
     },
   });
   await waitFor(() => app.$$("#games-list .card").length === 1);
-  app.click("Supprimer");
+  app.click("Supprimer", cardOf(app, "Catan"));
   const form = app.$("#game-confirmation-form");
   form.requestSubmit();
   await waitFor(
@@ -224,6 +239,7 @@ test("deleting a game remove it then reloads the list", async () => {
     "la boîte se ferme",
   );
   await waitFor(() => app.$$("#games-list .card").length === 0);
+  assertEqual(app.$$("#games-list .card").length, 0);
 });
 
 test("deleting a game that no longer exists shows an error in French and the dialog stays open", async () => {
@@ -304,6 +320,82 @@ test("borrowing without any member explains that one must be added first", async
   assertTrue(
     !app.$("#borrow-dialog").open,
     "la boîte d'emprunt ne doit pas s'ouvrir",
+  );
+});
+
+// Return Game
+
+test("returning a game calls the return route then updates the game card", async () => {
+  let games = [dixit];
+  const app = await mountApp({
+    "GET /games": () => [200, games],
+    "GET /members": [camille],
+    "GET /members/m1/loans": [dixitLoan],
+    "POST /loans/l1/return": () => {
+      games = [{ ...dixit, isAvailable: true }];
+      return [200, { ...dixitLoan, returnedAt: new Date().toISOString() }];
+    },
+  });
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+  assertIncludes(cardOf(app, "Dixit").textContent, "Emprunté");
+
+  app.click("Rendre", cardOf(app, "Dixit"));
+  await waitFor(
+    () => app.$("#return-game-confirmation-dialog").open,
+    "la boîte de confirmation",
+  );
+  app.$("#return-game-confirmation-form").requestSubmit();
+
+  await waitFor(
+    () =>
+      app.calls.some(
+        (call) => call.method === "POST" && call.path === "/loans/l1/return",
+      ),
+    "l'appel POST /loans/l1/return",
+  );
+  await waitFor(
+    () => !app.$("#return-game-confirmation-dialog").open,
+    "la boîte se ferme",
+  );
+  await waitFor(
+    () => app.$("#toasts").textContent.includes("vient d'être rendu"),
+    "le message de confirmation",
+  );
+  await waitFor(
+    () => cardOf(app, "Dixit").textContent.includes("Disponible"),
+    "la carte passe à Disponible",
+  );
+  const labels = [...cardOf(app, "Dixit").querySelectorAll("button")].map(
+    (button) => button.textContent,
+  );
+  assertTrue(labels.includes("Emprunter"), "Dixit devrait proposer Emprunter");
+  assertTrue(!labels.includes("Rendre"), "Dixit ne doit plus proposer Rendre");
+});
+
+test("returning a game already returned shows an error in French and the dialog stays open", async () => {
+  const app = await mountApp({
+    "GET /games": [dixit],
+    "GET /members": [camille],
+    "GET /members/m1/loans": [dixitLoan],
+    "POST /loans/l1/return": [
+      409,
+      { error: true, reason: "Loan is already returned" },
+    ],
+  });
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+  app.click("Rendre", cardOf(app, "Dixit"));
+  app.$("#return-game-confirmation-form").requestSubmit();
+  await waitFor(
+    () => !app.$("#return-game-confirmation-dialog .form-error").hidden,
+    "le message d'erreur",
+  );
+  assertEqual(
+    app.$("#return-game-confirmation-dialog .form-error").textContent,
+    "Cet emprunt a déjà été rendu.",
+  );
+  assertTrue(
+    app.$("#return-game-confirmation-dialog").open,
+    "la boîte devrait rester ouverte",
   );
 });
 
