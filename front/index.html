@@ -115,6 +115,21 @@
       </form>
     </dialog>
 
+    <dialog id="member-update-dialog">
+      <form method="dialog" id="member-update-form" novalidate>
+        <h2>Mettre à jour un·e adhérent·e</h2>
+        <label>Nom <input name="name" required /></label>
+        <label
+          >Adresse e-mail <input type="email" name="email" required
+        /></label>
+        <p class="form-error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" data-cancel>Annuler</button>
+          <button type="submit" class="primary">Enregistrer</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="borrow-dialog">
       <form method="dialog" id="borrow-form">
         <h2 id="borrow-dialog-title"></h2>
@@ -131,8 +146,20 @@
       </form>
     </dialog>
 
-    <dialog id="confirmation-dialog">
-      <form method="dialog" id="confirmation-form" novalidate>
+    <dialog id="game-confirmation-dialog">
+      <form method="dialog" id="game-confirmation-form" novalidate>
+        <h2 class="title"></h2>
+        <p class="message"></p>
+        <p class="form-error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" data-cancel>Non</button>
+          <button type="submit" class="danger">Oui</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="member-confirmation-dialog">
+      <form method="dialog" id="member-confirmation-form" novalidate>
         <h2 class="title"></h2>
         <p class="message"></p>
         <p class="form-error" role="alert" hidden></p>
@@ -145,6 +172,6 @@
 
     <div id="toasts" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js?v=20"></script>
+    <script type="module" src="app.js?v=1"></script>
   </body>
 </html>

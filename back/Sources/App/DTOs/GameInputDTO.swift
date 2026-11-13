@@ -20,6 +20,9 @@ struct GameInputDTO: Content, Validatable {
     }
 
     func toModel() -> Game {
-        Game(title: title, minPlayers: minPlayers, maxPlayers: maxPlayers, durationMinutes: durationMinutes)
+        Game(title: title.trimmed,
+             minPlayers: minPlayers,
+             maxPlayers: maxPlayers,
+             durationMinutes: durationMinutes)
     }
 }

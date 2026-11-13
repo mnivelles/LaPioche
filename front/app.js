@@ -187,25 +187,25 @@ bindSubmit(gameUpdateDialog, gameUpdateForm, (data) =>
 
 // --- Delete Game -----------------------------------------------------------
 
-const confirmationDialog = $("#confirmation-dialog");
-const confirmationForm = $("#confirmation-form");
+const gameConfirmationDialog = $("#game-confirmation-dialog");
+const gameConfirmationForm = $("#game-confirmation-form");
 
 let gameBeingDeleted = null;
 
 function openGameDeleteDialog(game) {
   gameBeingDeleted = game;
 
-  const title = $(".title", confirmationForm);
+  const title = $(".title", gameConfirmationForm);
   title.textContent = `Supprimer « ${game.title} »`;
 
-  const message = $(".message", confirmationDialog);
+  const message = $(".message", gameConfirmationDialog);
   message.textContent = "Voulez-vous vraiment supprimer ce jeu ?";
 
-  showFormError(confirmationDialog, null);
-  confirmationDialog.showModal();
+  showFormError(gameConfirmationDialog, null);
+  gameConfirmationDialog.showModal();
 }
 
-bindSubmit(confirmationDialog, confirmationForm, () =>
+bindSubmit(gameConfirmationDialog, gameConfirmationForm, () =>
   api.deleteGame(gameBeingDeleted.id),
 );
 
@@ -250,6 +250,15 @@ async function loadMembers() {
 }
 
 function memberRow(member) {
+  const actions = el("div", { class: "actions" });
+
+  actions.append(
+    button("Modifier", () => openMemberUpdateDialog(member), null),
+  );
+  actions.append(
+    button("Supprimer", () => openMemberDeleteDialog(member), "danger"),
+  );
+
   return el(
     "li",
     { class: "row" },
@@ -259,6 +268,7 @@ function memberRow(member) {
       el("p", {}, el("strong", {}, member.name)),
       el("p", { class: "meta" }, member.email),
     ),
+    actions,
   );
 }
 
@@ -279,3 +289,54 @@ bindSubmit(memberDialog, memberForm, (data) =>
 );
 
 refresh();
+
+// --- Update Member ---------------------------------------------------------
+
+const memberUpdateDialog = $("#member-update-dialog");
+const memberUpdateForm = $("#member-update-form");
+
+let memberBeingUpdated = null;
+
+function openMemberUpdateDialog(member) {
+  memberBeingUpdated = member;
+
+  memberUpdateForm.reset();
+  showFormError(memberUpdateDialog, null);
+  memberUpdateDialog.showModal();
+
+  const { name, email } = memberUpdateForm.elements;
+
+  name.value = member.name;
+  email.value = member.email;
+}
+
+bindSubmit(memberUpdateDialog, memberUpdateForm, (data) =>
+  api.updateMember(memberBeingUpdated.id, {
+    name: data.get("name").trim(),
+    email: data.get("email").trim(),
+  }),
+);
+
+// --- Delete Member ---------------------------------------------------------
+
+const memberConfirmationDialog = $("#member-confirmation-dialog");
+const memberConfirmationForm = $("#member-confirmation-form");
+
+let memberBeingDeleted = null;
+
+function openMemberDeleteDialog(member) {
+  memberBeingDeleted = member;
+
+  const title = $(".title", memberConfirmationForm);
+  title.textContent = `Supprimer « ${member.name} »`;
+
+  const message = $(".message", memberConfirmationDialog);
+  message.textContent = "Voulez-vous vraiment supprimer cet·te adhérent·e ?";
+
+  showFormError(memberConfirmationDialog, null);
+  memberConfirmationDialog.showModal();
+}
+
+bindSubmit(memberConfirmationDialog, memberConfirmationForm, () =>
+  api.deleteMember(memberBeingDeleted.id),
+);

@@ -10,6 +10,7 @@ struct MemberInputDTO: Content, Validatable {
     }
 
     func toModel() -> Member {
-        Member(name: name, email: email)
+        Member(name: name.trimmed,
+               email: email)
     }
 }

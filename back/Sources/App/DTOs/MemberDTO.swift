@@ -8,6 +8,8 @@ struct MemberDTO: Content {
 
 extension Member {
     func toDTO() -> MemberDTO {
-        MemberDTO(id: id, name: name, email: email)
+        MemberDTO(id: id,
+                  name: name,
+                  email: email)
     }
 }

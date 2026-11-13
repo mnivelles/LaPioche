@@ -30,6 +30,11 @@ const cardOf = (app, title) =>
     .$$("#games-list .card")
     .find((card) => card.querySelector("h3").textContent === title);
 
+// Remplace toute suite d'espaces ou de retours à la ligne par un seul espace,
+// comme le fait l'affichage dans le navigateur.
+// car Prettier reformate le HTML
+const textOf = (node) => node.textContent.replace(/\s+/g, " ").trim();
+
 // --- Jeux
 
 test("games list shows one card per game with its availability", async () => {
@@ -63,8 +68,8 @@ test("only an available game offers Borrow", async () => {
 test("with no game, a message invites to add one", async () => {
   const app = await mountApp({ "GET /games": [] });
   await waitFor(() => !app.$("#games-empty").hidden);
-  assertIncludes(app.$("#games-empty").textContent, "ne contient aucun jeu");
-  assertIncludes(app.$("#games-empty").textContent, "Ajouter un jeu");
+  assertIncludes(textOf(app.$("#games-empty")), "ne contient aucun jeu");
+  assertIncludes(textOf(app.$("#games-empty")), "Ajouter un jeu");
 });
 
 test("adding a game posts the form then reloads the list", async () => {
@@ -205,7 +210,7 @@ test("deleting a game remove it then reloads the list", async () => {
   });
   await waitFor(() => app.$$("#games-list .card").length === 1);
   app.click("Supprimer");
-  const form = app.$("#confirmation-form");
+  const form = app.$("#game-confirmation-form");
   form.requestSubmit();
   await waitFor(
     () =>
@@ -214,7 +219,10 @@ test("deleting a game remove it then reloads the list", async () => {
       ),
     "l'appel DELETE /games/g1",
   );
-  await waitFor(() => !app.$("#confirmation-dialog").open, "la boîte se ferme");
+  await waitFor(
+    () => !app.$("#game-confirmation-dialog").open,
+    "la boîte se ferme",
+  );
   await waitFor(() => app.$$("#games-list .card").length === 0);
 });
 
@@ -231,18 +239,18 @@ test("deleting a game that no longer exists shows an error in French and the dia
   });
   await waitFor(() => app.$$("#games-list .card").length === 1);
   app.click("Supprimer");
-  const form = app.$("#confirmation-form");
+  const form = app.$("#game-confirmation-form");
   form.requestSubmit();
   await waitFor(
-    () => !app.$("#confirmation-dialog .form-error").hidden,
+    () => !app.$("#game-confirmation-dialog .form-error").hidden,
     "le message d'erreur",
   );
   assertEqual(
-    app.$("#confirmation-dialog .form-error").textContent,
+    app.$("#game-confirmation-dialog .form-error").textContent,
     "Ce jeu n'existe pas ou a déjà été supprimé.",
   );
   assertTrue(
-    app.$("#confirmation-dialog").open,
+    app.$("#game-confirmation-dialog").open,
     "la boîte devrait rester ouverte",
   );
 });
@@ -317,10 +325,7 @@ test("members tab lists the members", async () => {
 test("with no member, a message invites to add one", async () => {
   const app = await mountApp({ "GET /members": [] }, { hash: "#members" });
   await waitFor(() => !app.$("#members-empty").hidden);
-  assertIncludes(
-    app.$("#members-empty").textContent,
-    "Ajouter un·e adhérent·e",
-  );
+  assertIncludes(textOf(app.$("#members-empty")), "Ajouter un·e adhérent·e");
 });
 
 test("adding a member posts the form", async () => {
@@ -368,5 +373,186 @@ test("an email already in use is shown in French", async () => {
   assertIncludes(
     app.$("#member-dialog .form-error").textContent,
     "utilise déjà cette adresse e-mail",
+  );
+});
+
+test("createMember, a validation error is shown in French and the dialog stays open", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [],
+      "POST /members": [
+        400,
+        {
+          error: true,
+          reason: "name is empty, email is not a valid email address",
+        },
+      ],
+    },
+    { hash: "#members" },
+  );
+  await waitFor(() => !app.$("#members-empty").hidden, "la page est chargée");
+  app.click("Ajouter un·e adhérent·e");
+  app.$("#member-form").requestSubmit();
+  await waitFor(
+    () => !app.$("#member-dialog .form-error").hidden,
+    "le message d'erreur",
+  );
+  assertEqual(
+    app.$("#member-dialog .form-error").textContent,
+    "Le nom est obligatoire. L'adresse e-mail n'est pas valide (exemple : nom@example.com).",
+  );
+  assertTrue(app.$("#member-dialog").open, "la boîte devrait rester ouverte");
+});
+
+test("updating a member sends the form then reloads the list", async () => {
+  let members = [camille];
+  const updated = {
+    ...camille,
+    name: "Camille Liones",
+    email: "camille@lion.es",
+  };
+  const app = await mountApp(
+    {
+      "GET /members": () => [200, members],
+      "PUT /members/m1": () => {
+        members = [updated];
+        return [200, updated];
+      },
+    },
+    { hash: "#members" },
+  );
+  await waitFor(
+    () => app.$$("#members-list .row").length === 1,
+    "la liste des adhérent·es est chargée",
+  );
+  app.click("Modifier");
+  const form = app.$("#member-update-form");
+  form.elements.name.value = "  Camille Liones ";
+  form.elements.email.value = "camille@lion.es";
+  form.requestSubmit();
+  await waitFor(
+    () =>
+      app.calls.some(
+        (call) => call.method === "PUT" && call.path === "/members/m1",
+      ),
+    "l'appel PUT /members/m1",
+  );
+  assertEqual(app.calls.find((call) => call.method === "PUT").body, {
+    name: "Camille Liones",
+    email: "camille@lion.es",
+  });
+  await waitFor(
+    () => !app.$("#member-update-dialog").open,
+    "la boîte se ferme",
+  );
+  await waitFor(() => {
+    const text = app.$("#members-list .row").textContent;
+    return text.includes("Camille Liones") && text.includes("camille@lion.es");
+  }, "la ligne affiche le nouveau nom et le nouveau courriel après rechargement");
+});
+
+test("updating a member, a validation error is shown in French and the dialog stays open", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "PUT /members/m1": [
+        400,
+        {
+          error: true,
+          reason: "name is empty, email is not a valid email address",
+        },
+      ],
+    },
+    { hash: "#members" },
+  );
+  await waitFor(
+    () => app.$$("#members-list .row").length === 1,
+    "la liste des adhérent·es est chargée",
+  );
+  app.click("Modifier");
+  const form = app.$("#member-update-form");
+  form.requestSubmit();
+  await waitFor(
+    () => !app.$("#member-update-dialog .form-error").hidden,
+    "le message d'erreur",
+  );
+  assertEqual(
+    app.$("#member-update-dialog .form-error").textContent,
+    "Le nom est obligatoire. L'adresse e-mail n'est pas valide (exemple : nom@example.com).",
+  );
+  assertTrue(
+    app.$("#member-update-dialog").open,
+    "la boîte devrait rester ouverte",
+  );
+});
+
+test("deleting a member remove it then reloads the list", async () => {
+  let members = [camille];
+  const app = await mountApp(
+    {
+      "GET /members": () => [200, members],
+      "DELETE /members/m1": () => {
+        members = [];
+        return [204];
+      },
+    },
+    { hash: "#members" },
+  );
+  await waitFor(
+    () => app.$$("#members-list .row").length === 1,
+    "la liste des adhérent·es est chargée",
+  );
+  app.click("Supprimer");
+  const form = app.$("#member-confirmation-form");
+  form.requestSubmit();
+  await waitFor(
+    () =>
+      app.calls.some(
+        (call) => call.method === "DELETE" && call.path === "/members/m1",
+      ),
+    "l'appel DELETE /members/m1",
+  );
+  await waitFor(
+    () => !app.$("#member-confirmation-dialog").open,
+    "la boîte se ferme",
+  );
+  await waitFor(
+    () => app.$$("#members-list .row").length === 0,
+    "la liste des adhérent·es est chargée",
+  );
+});
+
+test("deleting a member that no longer exists shows an error in French and the dialog stays open", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "DELETE /members/m1": [
+        404,
+        {
+          error: true,
+          reason: "Member not found",
+        },
+      ],
+    },
+    { hash: "#members" },
+  );
+  await waitFor(
+    () => app.$$("#members-list .row").length === 1,
+    "la liste des adhérent·es est chargée",
+  );
+  app.click("Supprimer");
+  const form = app.$("#member-confirmation-form");
+  form.requestSubmit();
+  await waitFor(
+    () => !app.$("#member-confirmation-dialog .form-error").hidden,
+    "le message d'erreur",
+  );
+  assertEqual(
+    app.$("#member-confirmation-dialog .form-error").textContent,
+    "Cet·te adhérent·e n'existe pas ou a déjà été supprimé·e.",
+  );
+  assertTrue(
+    app.$("#member-confirmation-dialog").open,
+    "la boîte devrait rester ouverte",
   );
 });

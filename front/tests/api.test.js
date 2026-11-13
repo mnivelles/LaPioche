@@ -142,6 +142,98 @@ test("delete game that does not exist (404) gives a message", async () => {
   assertEqual(error.message, "Ce jeu n'existe pas ou a déjà été supprimé.");
 });
 
+// --- Members
+
+test("listMembers calls GET /members", async () => {
+  const { fetch, calls } = fakeApi({ "GET /members": [] });
+  await withFakeFetch(fetch, () => api.listMembers());
+  assertEqual(`${calls[0].method} ${calls[0].path}`, "GET /members");
+});
+
+test("createMember sends a JSON POST", async () => {
+  const { fetch, calls } = fakeApi({ "POST /members": [201, { id: "1" }] });
+  const member = {
+    name: "Kenta Yanda",
+    email: "kenta@yanda.jp",
+  };
+  const created = await withFakeFetch(fetch, () => api.createMember(member));
+  assertEqual(calls[0].method, "POST");
+  assertEqual(calls[0].body, member);
+  assertEqual(created.id, "1");
+});
+
+test("update member sends a JSON PUT", async () => {
+  const { fetch, calls } = fakeApi({ "PUT /members/A": [200, { id: "A" }] });
+  const member = {
+    name: "Kenta Yanda",
+    email: "kenta@yanda.jp",
+  };
+  const updated = await withFakeFetch(fetch, () =>
+    api.updateMember("A", member),
+  );
+  assertEqual(calls[0].method, "PUT");
+  assertEqual(calls[0].body, member);
+  assertEqual(updated.id, "A");
+});
+
+test("update member that does not exist (404) gives a message", async () => {
+  const { fetch } = fakeApi({
+    "PUT /members/A": [404, { error: true, reason: "Member not found" }],
+  });
+  const member = {
+    name: "Kenta Yanda",
+    email: "kenta@yanda.jp",
+  };
+  const error = await expectError(
+    withFakeFetch(fetch, () => api.updateMember("A", member)),
+  );
+  assertTrue(error instanceof ApiError, "l'erreur devrait être une ApiError");
+  assertEqual(error.status, 404);
+  assertEqual(
+    error.message,
+    "Cet·te adhérent·e n'existe pas ou a déjà été supprimé·e.",
+  );
+});
+
+test("update member with invalid data (400) gives a message", async () => {
+  const { fetch } = fakeApi({
+    "PUT /members/A": [400, { error: true, reason: "name is required" }],
+  });
+  const member = {
+    name: "",
+    email: "kenta@yanda.jp",
+  };
+  const error = await expectError(
+    withFakeFetch(fetch, () => api.updateMember("A", member)),
+  );
+  assertTrue(error instanceof ApiError, "l'erreur devrait être une ApiError");
+  assertEqual(error.status, 400);
+  assertEqual(error.message, "Le nom est obligatoire.");
+});
+
+test("delete member", async () => {
+  const { fetch, calls } = fakeApi({ "DELETE /members/A": [204] });
+
+  await withFakeFetch(fetch, () => api.deleteMember("A"));
+  assertEqual(calls[0].method, "DELETE");
+});
+
+test("delete member that does not exist (404) gives a message", async () => {
+  const { fetch } = fakeApi({
+    "DELETE /members/A": [404, { error: true, reason: "Member not found" }],
+  });
+
+  const error = await expectError(
+    withFakeFetch(fetch, () => api.deleteMember("A")),
+  );
+  assertTrue(error instanceof ApiError, "l'erreur devrait être une ApiError");
+  assertEqual(error.status, 404);
+  assertEqual(
+    error.message,
+    "Cet·te adhérent·e n'existe pas ou a déjà été supprimé·e.",
+  );
+});
+
 // --- Loans
 
 test("borrow sends the game and the member", async () => {
