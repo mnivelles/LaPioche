@@ -58,7 +58,7 @@ struct GameController: RouteCollection {
         try await game.$loans.load(on: req.db)
         
         guard game.loans.isEmpty else {
-            throw Abort(.conflict, reason: "Game not found")
+            throw Abort(.conflict, reason: "A game with loans cannot be deleted")
         }
         
         try await game.delete(on: req.db)

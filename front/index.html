@@ -74,6 +74,32 @@
       </form>
     </dialog>
 
+    <dialog id="game-update-dialog">
+      <form method="dialog" id="game-update-form" novalidate>
+        <h2>Mettre à jour un jeu</h2>
+        <label>Titre <input name="title" required /></label>
+        <div class="pair">
+          <label
+            >Joueur·ses min
+            <input type="number" name="minPlayers" min="1" step="1" required
+          /></label>
+          <label
+            >Joueur·ses max
+            <input type="number" name="maxPlayers" min="1" step="1" required
+          /></label>
+        </div>
+        <label
+          >Durée (minutes)
+          <input type="number" name="durationMinutes" min="1" step="1" required
+        /></label>
+        <p class="form-error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" data-cancel>Annuler</button>
+          <button type="submit" class="primary">Enregistrer</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="member-dialog">
       <form method="dialog" id="member-form" novalidate>
         <h2>Ajouter un·e adhérent·e</h2>
@@ -105,8 +131,20 @@
       </form>
     </dialog>
 
+    <dialog id="confirmation-dialog">
+      <form method="dialog" id="confirmation-form" novalidate>
+        <h2 class="title"></h2>
+        <p class="message"></p>
+        <p class="form-error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" data-cancel>Non</button>
+          <button type="submit" class="danger">Oui</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="toasts" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20"></script>
   </body>
 </html>

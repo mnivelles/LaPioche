@@ -109,11 +109,18 @@ function gameCard(game) {
     : el("span", { class: "badge busy" }, "Emprunté");
 
   const actions = el("div", { class: "actions" });
+
+  actions.append(button("Modifier", () => openGameUpdateDialog(game), null));
+
   if (game.isAvailable) {
     actions.append(
       button("Emprunter", () => openBorrowDialog(game), "primary"),
     );
   }
+
+  actions.append(
+    button("Supprimer", () => openGameDeleteDialog(game), "danger"),
+  );
 
   return el(
     "li",
@@ -144,6 +151,62 @@ bindSubmit(gameDialog, gameForm, (data) =>
     maxPlayers: Number(data.get("maxPlayers")),
     durationMinutes: Number(data.get("durationMinutes")),
   }),
+);
+
+// --- Update Game -----------------------------------------------------------
+
+const gameUpdateDialog = $("#game-update-dialog");
+const gameUpdateForm = $("#game-update-form");
+
+let gameBeingUpdated = null;
+
+function openGameUpdateDialog(game) {
+  gameBeingUpdated = game;
+
+  gameUpdateForm.reset();
+  showFormError(gameUpdateDialog, null);
+  gameUpdateDialog.showModal();
+
+  const { title, minPlayers, maxPlayers, durationMinutes } =
+    gameUpdateForm.elements;
+
+  title.value = game.title;
+  minPlayers.value = game.minPlayers;
+  maxPlayers.value = game.maxPlayers;
+  durationMinutes.value = game.durationMinutes;
+}
+
+bindSubmit(gameUpdateDialog, gameUpdateForm, (data) =>
+  api.updateGame(gameBeingUpdated.id, {
+    title: data.get("title").trim(),
+    minPlayers: Number(data.get("minPlayers")),
+    maxPlayers: Number(data.get("maxPlayers")),
+    durationMinutes: Number(data.get("durationMinutes")),
+  }),
+);
+
+// --- Delete Game -----------------------------------------------------------
+
+const confirmationDialog = $("#confirmation-dialog");
+const confirmationForm = $("#confirmation-form");
+
+let gameBeingDeleted = null;
+
+function openGameDeleteDialog(game) {
+  gameBeingDeleted = game;
+
+  const title = $(".title", confirmationForm);
+  title.textContent = `Supprimer « ${game.title} »`;
+
+  const message = $(".message", confirmationDialog);
+  message.textContent = "Voulez-vous vraiment supprimer ce jeu ?";
+
+  showFormError(confirmationDialog, null);
+  confirmationDialog.showModal();
+}
+
+bindSubmit(confirmationDialog, confirmationForm, () =>
+  api.deleteGame(gameBeingDeleted.id),
 );
 
 // --- Emprunts --------------------------------------------------------------
