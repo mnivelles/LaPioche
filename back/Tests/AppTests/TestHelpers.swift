@@ -41,7 +41,7 @@ func createMember(
 ) async throws -> MemberDTO {
     var member: MemberDTO?
     try await app.test(.POST, "members", beforeRequest: { req in
-        try req.content.encode(CreateMemberDTO(name: name, email: email))
+        try req.content.encode(MemberInputDTO(name: name, email: email))
     }, afterResponse: { res async throws in
         member = try res.content.decode(MemberDTO.self)
     })

@@ -106,6 +106,10 @@ final class GameTests: XCTestCase {
             try await app.test(.GET, "games/\(id)", afterResponse: { res async throws in
                 XCTAssertEqual(res.status, .ok)
                 XCTAssertEqual(try res.content.decode(GameDTO.self).id, id)
+                XCTAssertEqual(try res.content.decode(GameDTO.self).title, game.title)
+                XCTAssertEqual(try res.content.decode(GameDTO.self).minPlayers, game.minPlayers)
+                XCTAssertEqual(try res.content.decode(GameDTO.self).maxPlayers, game.maxPlayers)
+                XCTAssertEqual(try res.content.decode(GameDTO.self).durationMinutes, game.durationMinutes)
             })
         }
     }

@@ -1,6 +1,6 @@
 import Vapor
 
-struct CreateMemberDTO: Content, Validatable {
+struct MemberInputDTO: Content, Validatable {
     let name: String
     let email: String
 

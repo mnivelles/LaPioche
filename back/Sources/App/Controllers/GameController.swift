@@ -25,17 +25,18 @@ struct GameController: RouteCollection {
     @Sendable
     func create(req: Request) async throws -> Response {
         try GameInputDTO.validate(content: req)
-        let dto = try req.content.decode(GameInputDTO.self)
-        try dto.ensureConsistentPlayerCount()
+        let input = try req.content.decode(GameInputDTO.self)
+        try input.ensureConsistentPlayerCount()
 
-        let game = dto.toModel()
-        try await game.save(on: req.db)
+        let game = input.toModel()
+        try await game.create(on: req.db)
+        
         return try await game.toDTO().encodeResponse(status: .created, for: req)
     }
 
     @Sendable
     func show(req: Request) async throws -> GameDTO {
-        try await findGame(req).toDTO()
+        try await findGame(req: req).toDTO()
     }
     
     @Sendable
@@ -44,7 +45,7 @@ struct GameController: RouteCollection {
         let input = try req.content.decode(GameInputDTO.self)
         try input.ensureConsistentPlayerCount()
         
-        let game = try await findGame(req)
+        let game = try await findGame(req: req)
         apply(input: input, to: game)
         try await game.update(on: req.db)
         
@@ -53,12 +54,13 @@ struct GameController: RouteCollection {
     
     @Sendable
     func delete(req: Request) async throws -> HTTPStatus {
-        let game = try await findGame(req)
+        let game = try await findGame(req: req)
         
         try await game.$loans.load(on: req.db)
         
         guard game.loans.isEmpty else {
-            throw Abort(.conflict, reason: "A game with loans cannot be deleted")
+            throw Abort(.conflict,
+                        reason: "A game with loans cannot be deleted")
         }
         
         try await game.delete(on: req.db)
@@ -66,7 +68,7 @@ struct GameController: RouteCollection {
         return .noContent
     }
 
-    private func findGame(_ req: Request) async throws -> Game {
+    private func findGame(req: Request) async throws -> Game {
         guard let gameID = req.parameters.get("gameID", as: UUID.self) else {
             throw Abort(.badRequest, reason: "Invalid game id")
         }
