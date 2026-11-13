@@ -5,6 +5,10 @@ struct LoanController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let loans = routes.grouped("loans")
         loans.post(use: create)
+        
+        loans.group(":loanID") { loan in
+            loan.post("return", use: returnGame)
+        }
     }
 
     @Sendable
@@ -36,5 +40,31 @@ struct LoanController: RouteCollection {
         )
         try await loan.save(on: req.db)
         return try await loan.toDTO().encodeResponse(status: .created, for: req)
+    }
+    
+    @Sendable
+    func returnGame(req: Request) async throws -> LoanDTO {
+        let loan = try await findLoan(req: req)
+        
+        guard loan.returnedAt == nil else {
+            throw Abort(.conflict, reason: "Loan is already returned")
+        }
+        
+        loan.returnedAt = .now
+        try await loan.update(on: req.db)
+        
+        return loan.toDTO()
+    }
+    
+    private func findLoan(req: Request) async throws -> Loan {
+        guard let loanID = req.parameters.get("loanID", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "Invalid loan id")
+        }
+        
+        guard let loan = try await Loan.find(loanID, on: req.db) else {
+            throw Abort(.notFound, reason: "Loan not found")
+        }
+        
+        return loan
     }
 }

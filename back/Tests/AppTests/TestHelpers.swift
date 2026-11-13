@@ -48,6 +48,28 @@ func createMember(
     return try XCTUnwrap(member)
 }
 
+func createLoanInDB(
+    _ app: Application,
+    gameID: UUID,
+    memberID: UUID,
+    borrowedAt: Date,
+    dueAt: Date,
+    returnedAt: Date? = nil
+) async throws -> LoanDTO {
+    let loan = Loan(gameID: gameID,
+                    memberID: memberID,
+                    borrowedAt: borrowedAt,
+                    dueAt: dueAt)
+    
+    if let returnedAt {
+        loan.returnedAt = returnedAt
+    }
+    
+    try await loan.create(on: app.db)
+    
+    return loan.toDTO()
+}
+
 // The API cannot create a loan that is already late, so tests insert it directly.
 func insertLoan(
     _ app: Application,
@@ -61,3 +83,4 @@ func insertLoan(
     loan.returnedAt = returnedAt
     try await loan.save(on: app.db)
 }
+
