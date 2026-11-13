@@ -170,8 +170,20 @@
       </form>
     </dialog>
 
+    <dialog id="return-game-confirmation-dialog">
+      <form method="dialog" id="return-game-confirmation-form" novalidate>
+        <h2 class="title"></h2>
+        <p class="message"></p>
+        <p class="form-error" role="alert" hidden></p>
+        <div class="actions">
+          <button type="button" data-cancel>Non</button>
+          <button type="submit" class="success">Oui</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="toasts" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js?v=1"></script>
+    <script type="module" src="app.js?v=3"></script>
   </body>
 </html>

@@ -116,6 +116,8 @@ function gameCard(game) {
     actions.append(
       button("Emprunter", () => openBorrowDialog(game), "primary"),
     );
+  } else {
+    actions.append(button("Rendre", () => openReturnGameDialog(game), null));
   }
 
   actions.append(
@@ -153,7 +155,7 @@ bindSubmit(gameDialog, gameForm, (data) =>
   }),
 );
 
-// --- Update Game -----------------------------------------------------------
+// --- Update Game
 
 const gameUpdateDialog = $("#game-update-dialog");
 const gameUpdateForm = $("#game-update-form");
@@ -185,8 +187,7 @@ bindSubmit(gameUpdateDialog, gameUpdateForm, (data) =>
   }),
 );
 
-// --- Delete Game -----------------------------------------------------------
-
+// --- Delete Game
 const gameConfirmationDialog = $("#game-confirmation-dialog");
 const gameConfirmationForm = $("#game-confirmation-form");
 
@@ -198,7 +199,7 @@ function openGameDeleteDialog(game) {
   const title = $(".title", gameConfirmationForm);
   title.textContent = `Supprimer « ${game.title} »`;
 
-  const message = $(".message", gameConfirmationDialog);
+  const message = $(".message", gameConfirmationForm);
   message.textContent = "Voulez-vous vraiment supprimer ce jeu ?";
 
   showFormError(gameConfirmationDialog, null);
@@ -240,6 +241,30 @@ bindSubmit(borrowDialog, borrowForm, async (data) => {
     `« ${borrowedGame.title} » emprunté, à rendre avant le ${formatDate(loan.dueAt)}.`,
   );
 });
+
+// --- Return Game
+
+const returnGameConfirmationDialog = $("#return-game-confirmation-dialog");
+const returnGameConfirmationForm = $("#return-game-confirmation-form");
+
+let gameBeingReturned = null;
+
+function openReturnGameDialog(game) {
+  gameBeingReturned = game;
+
+  const title = $(".title", returnGameConfirmationForm);
+  title.textContent = `Rendre « ${game.title} »`;
+
+  const message = $(".message", returnGameConfirmationForm);
+  message.textContent = "Voulez-vous vraiment rendre ce jeu ?";
+
+  showFormError(returnGameConfirmationDialog, null);
+  returnGameConfirmationDialog.showModal();
+}
+
+bindSubmit(returnGameConfirmationDialog, returnGameConfirmationForm, () =>
+  returnGame(gameBeingReturned),
+);
 
 // --- Adhérent·es -----------------------------------------------------------
 
@@ -290,7 +315,7 @@ bindSubmit(memberDialog, memberForm, (data) =>
 
 refresh();
 
-// --- Update Member ---------------------------------------------------------
+// --- Update Member
 
 const memberUpdateDialog = $("#member-update-dialog");
 const memberUpdateForm = $("#member-update-form");
@@ -317,7 +342,7 @@ bindSubmit(memberUpdateDialog, memberUpdateForm, (data) =>
   }),
 );
 
-// --- Delete Member ---------------------------------------------------------
+// --- Delete Member
 
 const memberConfirmationDialog = $("#member-confirmation-dialog");
 const memberConfirmationForm = $("#member-confirmation-form");
@@ -330,7 +355,7 @@ function openMemberDeleteDialog(member) {
   const title = $(".title", memberConfirmationForm);
   title.textContent = `Supprimer « ${member.name} »`;
 
-  const message = $(".message", memberConfirmationDialog);
+  const message = $(".message", memberConfirmationForm);
   message.textContent = "Voulez-vous vraiment supprimer cet·te adhérent·e ?";
 
   showFormError(memberConfirmationDialog, null);
@@ -340,3 +365,31 @@ function openMemberDeleteDialog(member) {
 bindSubmit(memberConfirmationDialog, memberConfirmationForm, () =>
   api.deleteMember(memberBeingDeleted.id),
 );
+
+// --- Helpers
+
+async function getCurrentLoanID(gameID) {
+  const members = await api.listMembers();
+
+  const memberIDs = members.map((m) => m.id);
+
+  const loansByMember = await Promise.all(
+    memberIDs.map((id) => {
+      return api.listLoansOfMember(id);
+    }),
+  );
+
+  return loansByMember
+    .flatMap((item) => item)
+    .find((item) => item.gameID === gameID && !item.returnedAt)?.id;
+}
+
+async function returnGame(game) {
+  const loanID = await getCurrentLoanID(game.id);
+
+  if (!!loanID) {
+    await api.returnGame(loanID);
+
+    toast(`« ${game.title} » vient d'être rendu`);
+  }
+}

@@ -234,12 +234,63 @@ test("delete member that does not exist (404) gives a message", async () => {
   );
 });
 
+test("list loans of member calls GET /members/{id}/loans", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /members/A/loans": [200, [{ id: "l1" }, { id: "l2" }, { id: "l3" }]],
+  });
+
+  const loans = await withFakeFetch(fetch, () => api.listLoansOfMember("A"));
+
+  assertEqual(`${calls[0].method} ${calls[0].path}`, "GET /members/A/loans");
+  assertEqual(loans.length, 3);
+});
+
+test("list loans of member that does not exist (404) gives a message", async () => {
+  const { fetch } = fakeApi({
+    "GET /members/A/loans": [404, { error: true, reason: "Member not found" }],
+  });
+
+  const error = await expectError(
+    withFakeFetch(fetch, () => api.listLoansOfMember("A")),
+  );
+  assertTrue(error instanceof ApiError, "l'erreur devrait être une ApiError");
+  assertEqual(error.status, 404);
+  assertEqual(
+    error.message,
+    "Cet·te adhérent·e n'existe pas ou a déjà été supprimé·e.",
+  );
+});
+
 // --- Loans
 
 test("borrow sends the game and the member", async () => {
   const { fetch, calls } = fakeApi({ "POST /loans": [201, { id: "l1" }] });
   await withFakeFetch(fetch, () => api.borrow("g1", "m1"));
   assertEqual(calls[0].body, { gameID: "g1", memberID: "m1" });
+});
+
+test("return game returns a loan", async () => {
+  const { fetch, calls } = fakeApi({
+    "POST /loans/l1/return": [200, { id: "l1" }],
+  });
+
+  const loan = await withFakeFetch(fetch, () => api.returnGame("l1"));
+
+  assertEqual(`${calls[0].method} ${calls[0].path}`, "POST /loans/l1/return");
+  assertEqual(loan.id, "l1");
+});
+
+test("return game with loan that does not exist (404) gives a message", async () => {
+  const { fetch } = fakeApi({
+    "POST /loans/l1/return": [404, { error: true, reason: "Loan not found" }],
+  });
+
+  const error = await expectError(
+    withFakeFetch(fetch, () => api.returnGame("l1")),
+  );
+  assertTrue(error instanceof ApiError, "l'erreur devrait être une ApiError");
+  assertEqual(error.status, 404);
+  assertEqual(error.message, "Cet emprunt n'existe pas.");
 });
 
 // --- erreurs
