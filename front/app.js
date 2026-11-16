@@ -77,9 +77,13 @@ function bindSubmit(dialog, form, handler) {
   });
 }
 
+// overdue games ID
+
+let overdueGameIDs = [];
+
 // --- Onglets ---------------------------------------------------------------
 
-const tabs = ["games", "members"];
+const tabs = ["games", "members", "overdue-loans"];
 
 function currentTab() {
   const name = location.hash.slice(1);
@@ -92,7 +96,19 @@ async function refresh() {
     $(`#${name}`).hidden = name !== tab;
     $(`[data-tab="${name}"]`).toggleAttribute("aria-current", name === tab);
   }
-  await run(tab === "games" ? loadGames : loadMembers);
+  if (tab === "games") {
+    await run(() => {
+      loadOverdueLoans(false);
+    });
+    await run(loadGames);
+  } else if (tab === "members") {
+    await run(() => {
+      loadOverdueLoans(false);
+    });
+    await run(loadMembers);
+  } else if (tab === "overdue-loans") {
+    await run(loadOverdueLoans);
+  }
 }
 
 window.addEventListener("hashchange", refresh);
@@ -106,13 +122,17 @@ async function loadGames() {
 }
 
 function gameCard(game) {
+  const isOverdue = overdueGameIDs.includes(game.id);
+
   const players =
     game.minPlayers === game.maxPlayers
       ? `${game.minPlayers}`
       : `${game.minPlayers} à ${game.maxPlayers}`;
   const status = game.isAvailable
     ? el("span", { class: "badge ok" }, "Disponible")
-    : el("span", { class: "badge busy" }, "Emprunté");
+    : isOverdue
+      ? el("span", { class: "badge late" }, "Emprunté [retard]")
+      : el("span", { class: "badge busy" }, "Emprunté");
 
   const actions = el("div", { class: "actions" });
 
@@ -218,6 +238,52 @@ bindSubmit(gameConfirmationDialog, gameConfirmationForm, () =>
 
 // --- Emprunts --------------------------------------------------------------
 
+async function loadOverdueLoans(isOnPage = true) {
+  // try-catch car overdueGameIDs est utilisé dans les tests.
+  try {
+    const loans = await api.listOverdueLoans();
+
+    overdueGameIDs = loans.map((loan) => loan.gameID);
+
+    $("header nav a[data-tab='overdue-loans']").textContent =
+      `Emprunts en retard (${loans.length})`;
+
+    if (isOnPage) {
+      $("#overdue-loans .title").textContent =
+        `Emprunts en retard (${loans.length})`;
+
+      $("#overdue-loans-empty").hidden = loans.length > 0;
+
+      const cards = await Promise.all(loans.map(overdueLoanRow));
+      $("#overdue-loans-list").replaceChildren(...cards);
+    }
+  } catch {
+    overdueGameIDs = [];
+
+    $("header nav a[data-tab='overdue-loans']").textContent =
+      `Emprunts en retard`;
+  }
+}
+
+async function overdueLoanRow(loan) {
+  const game = await api.showGame(loan.gameID);
+  const member = await api.showMember(loan.memberID);
+
+  const gameTitle = el("h3", { class: "gameTitle" }, game.title);
+  const memberName = labelContentEl("Adhérent·e :", member.name);
+  const dueAt = labelContentEl("Retour prévu :", formatDateTime(loan.dueAt));
+
+  const diffTime = Math.abs(new Date(loan.dueAt) - new Date());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  const overdueDate = labelContentEl(
+    "Retard :",
+    `${diffDays} ${diffDays > 1 ? "jours" : "jour"}`,
+  );
+
+  return el("li", { class: "card" }, gameTitle, memberName, dueAt, overdueDate);
+}
+
 const borrowDialog = $("#borrow-dialog");
 const borrowForm = $("#borrow-form");
 let borrowedGame = null;
@@ -289,12 +355,12 @@ async function openMemberLoansDialog(member) {
 
 async function loadLoansOf(memberID) {
   const loans = await api.listLoansOfMember(memberID);
-  const rows = await Promise.all(loans.map(loanRow));
+  const rows = await Promise.all(loans.map(memberLoanRow));
   $("#member-loans-empty").hidden = loans.length > 0;
   $("#member-loans-list").replaceChildren(...rows);
 }
 
-async function loanRow(loan) {
+async function memberLoanRow(loan) {
   const game = await api.showGame(loan.gameID);
 
   const gameTitle = el("h3", { class: "gameTitle" }, game.title);

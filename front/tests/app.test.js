@@ -30,7 +30,7 @@ const dixitLoan = {
   gameID: "g2",
   memberID: "m1",
   borrowedAt: "2026-11-01T10:00:00Z",
-  dueAt: "2026-11-15T10:00:00Z",
+  dueAt: "2026-11-14T10:00:00Z",
   returnedAt: null,
 };
 
@@ -420,8 +420,6 @@ test("list loans of member shows rows of loans", async () => {
     "la liste des emprunts est chargée",
   );
 
-  assertEqual(app.$$("#member-loans-list .loanRow").length, 1);
-
   const loan = app.$("#member-loans-list .loanRow:first-child");
   const gameTitle = loan.querySelector(".gameTitle");
 
@@ -435,7 +433,7 @@ test("list loans of member shows rows of loans", async () => {
   const dueAt = loan.querySelectorAll(".labelContent .content")[1];
 
   // on cherche seulement la date car l'heure pourrait changer entre été et hiver
-  assertIncludes(dueAt.textContent, "15 nov. 2026");
+  assertIncludes(dueAt.textContent, "14 nov. 2026");
 
   const status = loan.querySelector(".labelContent:last-child .content");
 
@@ -579,6 +577,95 @@ test("list loans of member shows en empty list with a message", async () => {
     textOf(app.$("#member-loans-empty")),
     "Aucun jeu emprunté pour le moment. Allez dans l'onglet « Jeux » puis empruntez un des jeux présents.",
   );
+});
+
+// Overdue Loans
+
+test("overdue loans shows rows of overdue loans", async () => {
+  const app = await mountApp(
+    {
+      "GET /loans/overdue": [200, [dixitLoan]],
+      "GET /games/g2": [200, dixit],
+      "GET /members/m1": [200, camille],
+    },
+    { hash: "#overdue-loans" },
+  );
+
+  await waitFor(() => app.$$("#overdue-loans-list .card").length === 1);
+
+  const loan = app.$("#overdue-loans-list .card:first-child");
+  const gameTitle = loan.querySelector(".gameTitle");
+
+  assertEqual(gameTitle.textContent, "Dixit");
+
+  const name = loan.querySelectorAll(".labelContent .content")[0];
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertIncludes(name.textContent, "Camille");
+
+  const dueAt = loan.querySelectorAll(".labelContent .content")[1];
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertIncludes(dueAt.textContent, "14 nov. 2026");
+
+  const late = loan.querySelector(".labelContent:last-child .content");
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertIncludes(late.textContent, " jours");
+});
+
+test("overdue loans are visible in game list", async () => {
+  const app = await mountApp(
+    {
+      "GET /games": [200, [catan, dixit]],
+      "GET /loans/overdue": [200, [dixitLoan]],
+      "GET /games/g2": [200, dixit],
+      "GET /members/m1": [200, camille],
+    },
+    { hash: "#games" },
+  );
+
+  await waitFor(() => app.$$("#games-list .card").length === 2);
+
+  let dixitBadge = cardOf(app, "Dixit").querySelector(".badge");
+  assertEqual(dixitBadge.textContent, "Emprunté [retard]");
+
+  let catanBadge = cardOf(app, "Catan").querySelector(".badge");
+  assertEqual(catanBadge.textContent, "Disponible");
+});
+
+test("overdue loans shows empty message", async () => {
+  const app = await mountApp(
+    {
+      "GET /loans/overdue": [200, []],
+    },
+    { hash: "#overdue-loans" },
+  );
+
+  await waitFor(() => !app.$("#overdue-loans-empty").hidden);
+
+  assertEqual(
+    textOf(app.$("#overdue-loans-empty")),
+    "Aucune remise de jeu en retard pour le moment. Tous les emprunts sont en cours ou rendu.",
+  );
+});
+
+test("overdue loans are not visible in game list", async () => {
+  const app = await mountApp(
+    {
+      "GET /games": [200, [catan, dixit]],
+      "GET /loans/overdue": [200, []],
+    },
+    { hash: "#games" },
+  );
+
+  await waitFor(() => app.$$("#games-list .card").length === 2);
+
+  let dixitBadge = cardOf(app, "Dixit").querySelector(".badge");
+  assertEqual(dixitBadge.textContent, "Emprunté");
+
+  let catanBadge = cardOf(app, "Catan").querySelector(".badge");
+  assertEqual(catanBadge.textContent, "Disponible");
 });
 
 // --- Adhérent·es

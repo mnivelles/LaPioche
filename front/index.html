@@ -12,6 +12,7 @@
       <nav aria-label="Sections">
         <a href="#games" data-tab="games">Jeux</a>
         <a href="#members" data-tab="members">Adhérent·es</a>
+        <a href="#overdue-loans" data-tab="overdue-loans">Emprunts en retard</a>
       </nav>
       <a class="docs-link" id="docs-link" href="http://localhost:8081/"
         >Documentation API</a
@@ -45,6 +46,17 @@
           adhérent·e » pour créer le premier ou la première.
         </p>
         <ul id="members-list" class="rows"></ul>
+      </section>
+
+      <section id="overdue-loans" class="tab" hidden>
+        <div class="section-head">
+          <h2 class="title">Emprunts en retard (0)</h2>
+        </div>
+        <p id="overdue-loans-empty" class="empty" hidden>
+          Aucune remise de jeu en retard pour le moment. Tous les emprunts sont
+          en cours ou rendu.
+        </p>
+        <ul id="overdue-loans-list" class="cards"></ul>
       </section>
     </main>
 
@@ -194,6 +206,6 @@
 
     <div id="toasts" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js?v=27"></script>
+    <script type="module" src="app.js?v=36"></script>
   </body>
 </html>
