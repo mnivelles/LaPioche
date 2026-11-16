@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>La Pioche - Ludothèque</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=1" />
   </head>
   <body>
     <header class="topbar">
@@ -130,6 +130,16 @@
       </form>
     </dialog>
 
+    <dialog id="member-loans-dialog" closedby="any">
+      <h2 class="title"></h2>
+      <p id="member-loans-empty" class="empty" hidden>
+        Aucun jeu emprunté pour le moment. Allez dans l'onglet « Jeux » puis
+        empruntez un des jeux présents.
+      </p>
+      <ul id="member-loans-list" class="rows"></ul>
+      <button commandfor="member-loans-dialog" command="close">Fermer</button>
+    </dialog>
+
     <dialog id="borrow-dialog">
       <form method="dialog" id="borrow-form">
         <h2 id="borrow-dialog-title"></h2>
@@ -184,6 +194,6 @@
 
     <div id="toasts" role="status" aria-live="polite"></div>
 
-    <script type="module" src="app.js?v=3"></script>
+    <script type="module" src="app.js?v=27"></script>
   </body>
 </html>

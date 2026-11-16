@@ -399,6 +399,188 @@ test("returning a game already returned shows an error in French and the dialog 
   );
 });
 
+// Member Loans
+
+test("list loans of member shows rows of loans", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "GET /members/m1/loans": [200, [dixitLoan]],
+      "GET /games/g2": [200, dixit],
+    },
+    { hash: "#members" },
+  );
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Emprunts", rowOf(app, "Camille"));
+
+  await waitFor(
+    () => app.$$("#member-loans-list .loanRow").length === 1,
+    "la liste des emprunts est chargée",
+  );
+
+  assertEqual(app.$$("#member-loans-list .loanRow").length, 1);
+
+  const loan = app.$("#member-loans-list .loanRow:first-child");
+  const gameTitle = loan.querySelector(".gameTitle");
+
+  assertEqual(gameTitle.textContent, "Dixit");
+
+  const borrowedAt = loan.querySelectorAll(".labelContent .content")[0];
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertIncludes(borrowedAt.textContent, "1 nov. 2026");
+
+  const dueAt = loan.querySelectorAll(".labelContent .content")[1];
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertIncludes(dueAt.textContent, "15 nov. 2026");
+
+  const status = loan.querySelector(".labelContent:last-child .content");
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertEqual(status.textContent, "En retard");
+});
+
+test("list loans of member shows a loan with 'En retard' status", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "GET /members/m1/loans": [
+        200,
+        [
+          {
+            ...dixitLoan,
+            dueAt: "2026-11-01T10:00:00Z",
+            returnedAt: null,
+          },
+        ],
+      ],
+      "GET /games/g2": [200, dixit],
+    },
+    { hash: "#members" },
+  );
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Emprunts", rowOf(app, "Camille"));
+
+  await waitFor(
+    () => app.$$("#member-loans-list .loanRow").length === 1,
+    "la liste des emprunts est chargée",
+  );
+
+  assertEqual(app.$$("#member-loans-list .loanRow").length, 1);
+
+  const loan = app.$("#member-loans-list .loanRow:first-child");
+
+  const status = loan.querySelector(".labelContent:last-child .content");
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertEqual(status.textContent, "En retard");
+});
+
+test("list loans of member shows a loan with 'En cours' status", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "GET /members/m1/loans": [
+        200,
+        [
+          {
+            ...dixitLoan,
+            dueAt: "2100-01-01T10:00:00Z",
+            returnedAt: null,
+          },
+        ],
+      ],
+      "GET /games/g2": [200, dixit],
+    },
+    { hash: "#members" },
+  );
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Emprunts", rowOf(app, "Camille"));
+
+  await waitFor(
+    () => app.$$("#member-loans-list .loanRow").length === 1,
+    "la liste des emprunts est chargée",
+  );
+
+  assertEqual(app.$$("#member-loans-list .loanRow").length, 1);
+
+  const loan = app.$("#member-loans-list .loanRow:first-child");
+
+  const status = loan.querySelector(".labelContent:last-child .content");
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertEqual(status.textContent, "En cours");
+});
+
+test("list loans of member shows a loan with 'Rendu' status", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "GET /members/m1/loans": [
+        200,
+        [
+          {
+            ...dixitLoan,
+            dueAt: "2100-01-01T10:00:00Z",
+            returnedAt: "2026-11-11T10:00:00Z",
+          },
+        ],
+      ],
+      "GET /games/g2": [200, dixit],
+    },
+    { hash: "#members" },
+  );
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Emprunts", rowOf(app, "Camille"));
+
+  await waitFor(
+    () => app.$$("#member-loans-list .loanRow").length === 1,
+    "la liste des emprunts est chargée",
+  );
+
+  assertEqual(app.$$("#member-loans-list .loanRow").length, 1);
+
+  const loan = app.$("#member-loans-list .loanRow:first-child");
+
+  const status = loan.querySelector(".labelContent:last-child .content");
+
+  // on cherche seulement la date car l'heure pourrait changer entre été et hiver
+  assertEqual(status.textContent, "Rendu");
+});
+
+test("list loans of member shows en empty list with a message", async () => {
+  const app = await mountApp(
+    {
+      "GET /members": [camille],
+      "GET /members/m1/loans": [200, []],
+    },
+    { hash: "#members" },
+  );
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Emprunts", rowOf(app, "Camille"));
+
+  await waitFor(
+    () => !app.$("#member-loans-empty").hidden,
+    "la liste des emprunts est chargée",
+  );
+
+  assertEqual(
+    textOf(app.$("#member-loans-empty")),
+    "Aucun jeu emprunté pour le moment. Allez dans l'onglet « Jeux » puis empruntez un des jeux présents.",
+  );
+});
+
 // --- Adhérent·es
 
 test("members tab lists the members", async () => {

@@ -8,6 +8,12 @@ $("#docs-link").href = API_URL;
 const dateFormat = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" });
 const formatDate = (iso) => dateFormat.format(new Date(iso));
 
+const dateTimeFormat = new Intl.DateTimeFormat("fr-FR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const formatDateTime = (iso) => dateTimeFormat.format(new Date(iso));
+
 // Construit un élément sans jamais passer par innerHTML : les données de
 // l'API (titres, noms) sont insérées comme du texte.
 function el(tag, props = {}, ...children) {
@@ -266,6 +272,56 @@ bindSubmit(returnGameConfirmationDialog, returnGameConfirmationForm, () =>
   returnGame(gameBeingReturned),
 );
 
+// --- Member Loans
+
+const memberLoansDialog = $("#member-loans-dialog");
+
+async function openMemberLoansDialog(member) {
+  await run(async () => {
+    $(".title", memberLoansDialog).textContent =
+      `Liste des emprunts de « ${member.name} »`;
+
+    loadLoansOf(member.id);
+
+    memberLoansDialog.showModal();
+  });
+}
+
+async function loadLoansOf(memberID) {
+  const loans = await api.listLoansOfMember(memberID);
+  const rows = await Promise.all(loans.map(loanRow));
+  $("#member-loans-empty").hidden = loans.length > 0;
+  $("#member-loans-list").replaceChildren(...rows);
+}
+
+async function loanRow(loan) {
+  const game = await api.showGame(loan.gameID);
+
+  const gameTitle = el("h3", { class: "gameTitle" }, game.title);
+  const borrowedAt = labelContentEl(
+    "Date d'emprunts :",
+    formatDateTime(loan.borrowedAt),
+  );
+  const dueAt = labelContentEl("Retour prévu :", formatDateTime(loan.dueAt));
+
+  const loanState = loan.returnedAt
+    ? "Rendu"
+    : new Date(loan.dueAt).getTime() > new Date().getTime()
+      ? "En cours"
+      : "En retard";
+
+  const state = labelContentEl("État :", loanState);
+
+  return el("li", { class: "loanRow" }, gameTitle, borrowedAt, dueAt, state);
+}
+
+function labelContentEl(label, content) {
+  const labelEl = el("span", { class: "label" }, label);
+  const contentEl = el("span", { class: "content" }, content);
+
+  return el("div", { class: "labelContent" }, labelEl, contentEl);
+}
+
 // --- Adhérent·es -----------------------------------------------------------
 
 async function loadMembers() {
@@ -277,9 +333,9 @@ async function loadMembers() {
 function memberRow(member) {
   const actions = el("div", { class: "actions" });
 
-  actions.append(
-    button("Modifier", () => openMemberUpdateDialog(member), null),
-  );
+  actions.append(button("Emprunts", () => openMemberLoansDialog(member)));
+
+  actions.append(button("Modifier", () => openMemberUpdateDialog(member)));
   actions.append(
     button("Supprimer", () => openMemberDeleteDialog(member), "danger"),
   );
