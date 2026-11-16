@@ -16,9 +16,31 @@ struct GameController: RouteCollection {
 
     @Sendable
     func index(req: Request) async throws -> [GameDTO] {
-        let games = try await Game.query(on: req.db)
+        let query = Game.query(on: req.db)
             .with(\.$loans)
-            .all()
+        
+        try GameSearchFilterDTO.validate(query: req)
+        let input = try req.query.decode(GameSearchFilterDTO.self)
+        
+        if let searchText = input.q?.trimmed,
+           !searchText.isEmpty {
+            query
+                .filter(\.$title ~~ searchText)
+        }
+        
+        if let players = input.players {
+            query
+                .filter(\.$minPlayers <= players)
+                .filter(\.$maxPlayers >= players)
+        }
+        
+        if let maxDuration = input.maxDuration {
+            query
+                .filter(\.$durationMinutes <= maxDuration)
+        }
+        
+        let games = try await query.all()
+        
         return games.map { $0.toDTO() }
     }
 
