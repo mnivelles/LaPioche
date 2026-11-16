@@ -95,6 +95,106 @@ final class LoanTests: XCTestCase {
         }
     }
     
+    func testListOverdueLoans() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            let memberID = try XCTUnwrap(member.id)
+            
+            let game1 = try await createGame(app, title: "Prime")
+            let game1ID = try XCTUnwrap(game1.id)
+            
+            let game2 = try await createGame(app, title: "Secundo")
+            let game2ID = try XCTUnwrap(game2.id)
+            
+            let game3 = try await createGame(app, title: "Tertio")
+            let game3ID = try XCTUnwrap(game3.id)
+            
+            _ = try await createLoanInDB(
+                app,
+                gameID: game1ID,
+                memberID: memberID,
+                borrowedAt: .distantPast,
+                dueAt: .now.addingTimeInterval(-60 * 60 * 24 * 3),
+                returnedAt: nil
+            )
+            
+            _ = try await createLoanInDB(
+                app,
+                gameID: game2ID,
+                memberID: memberID,
+                borrowedAt: .distantPast,
+                dueAt: .now.addingTimeInterval(-60 * 60 * 24 * 7),
+                returnedAt: nil
+            )
+            
+            _ = try await createLoanInDB(
+                app,
+                gameID: game3ID,
+                memberID: memberID,
+                borrowedAt: .distantPast,
+                dueAt: .now.addingTimeInterval(-60 * 60 * 24 * 12),
+                returnedAt: nil
+            )
+            
+            print(Date.now.addingTimeInterval(-60 * 60 * 24 * 3).formatted())
+            
+            try await app.test(.GET, "loans/overdue", afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode([LoanDTO].self).count, 3)
+            })
+        }
+    }
+    
+    func testListOnlyOverdueLoans() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            let memberID = try XCTUnwrap(member.id)
+            
+            let game1 = try await createGame(app, title: "Prime")
+            let game1ID = try XCTUnwrap(game1.id)
+            
+            let game2 = try await createGame(app, title: "Secundo")
+            let game2ID = try XCTUnwrap(game2.id)
+            
+            let game3 = try await createGame(app, title: "Tertio")
+            let game3ID = try XCTUnwrap(game3.id)
+            
+            _ = try await createLoanInDB(
+                app,
+                gameID: game1ID,
+                memberID: memberID,
+                borrowedAt: .distantPast,
+                dueAt: .now.addingTimeInterval(-60 * 60 * 24 * 3),
+                returnedAt: .now
+            )
+            
+            _ = try await createLoanInDB(
+                app,
+                gameID: game2ID,
+                memberID: memberID,
+                borrowedAt: .distantPast,
+                dueAt: .now.addingTimeInterval(-60 * 60 * 24 * 7),
+                returnedAt: nil
+            )
+            
+            _ = try await createLoanInDB(
+                app,
+                gameID: game3ID,
+                memberID: memberID,
+                borrowedAt: .distantPast,
+                dueAt: .now.addingTimeInterval(60 * 60 * 24 * 10),
+                returnedAt: nil
+            )
+            
+            print(Date.now.addingTimeInterval(-60 * 60 * 24 * 3).formatted())
+            
+            try await app.test(.GET, "loans/overdue", afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode([LoanDTO].self).count, 1)
+            })
+        }
+    }
+    
     func testReturnGameReturnsOk() async throws {
         try await withApp { app in
             let game = try await createGame(app)
