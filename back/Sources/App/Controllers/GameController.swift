@@ -19,7 +19,6 @@ struct GameController: RouteCollection {
         let query = Game.query(on: req.db)
             .with(\.$loans)
         
-        try GameSearchFilterDTO.validate(query: req)
         let input = try req.query.decode(GameSearchFilterDTO.self)
         
         if let searchText = input.q?.trimmed,
