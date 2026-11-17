@@ -19,13 +19,12 @@ struct GameSearchFilterDTO: Content {
         q = try container.decodeIfPresent(String.self, forKey: .q)
         players = try Self.positiveInt(container, .players)
         maxDuration = try Self.positiveInt(container, .maxDuration)
-        available = try container.decodeIfPresent(Bool.self, forKey: .available)
+        available = try Self.boolean(container, .available)
     }
     
     private static func positiveInt(
         _ container: KeyedDecodingContainer<CodingKeys>,
-        _ key: CodingKeys
-    ) throws -> Int? {
+        _ key: CodingKeys) throws -> Int? {
         guard let raw = try container.decodeIfPresent(String.self, forKey: key)?.trimmed,
               !raw.isEmpty else {
             return nil
@@ -35,6 +34,22 @@ struct GameSearchFilterDTO: Content {
             throw DecodingError.dataCorruptedError(forKey: key,
                                                    in: container,
                                                    debugDescription: "\(key.stringValue) must be an integer >= 1")
+        }
+        
+        return value
+    }
+    
+    private static func boolean(_ container: KeyedDecodingContainer<CodingKeys>,
+                                _ key: CodingKeys) throws -> Bool? {
+        guard let raw = try container.decodeIfPresent(String.self, forKey: key)?.trimmed,
+              !raw.isEmpty else {
+            return nil
+        }
+        
+        guard let value = Bool(raw) else {
+            throw DecodingError.dataCorruptedError(forKey: key,
+                                                   in: container,
+                                                   debugDescription: "\(key.stringValue) must be a boolean")
         }
         
         return value
