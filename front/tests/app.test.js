@@ -86,6 +86,36 @@ test("with no game, a message invites to add one", async () => {
   assertIncludes(textOf(app.$("#games-empty")), "Ajouter un jeu");
 });
 
+test("with a search that returns no items, a message is showed", async () => {
+  const app = await mountApp({
+    "GET /games": [catan, dixit],
+    "GET /games?q=t&players=4&maxDuration=40": [],
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "les deux jeux sont affichés",
+  );
+  assertTrue(app.$("#games-empty").hidden);
+
+  const form = app.$("#game-search-form");
+  form.elements.query.value = "t";
+  form.elements.players.value = "4";
+  form.elements.maxDuration.value = "40";
+  app.click("Rechercher");
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 0,
+    "la liste est vidée",
+  );
+
+  assertTrue(!app.$("#games-empty").hidden);
+  assertEqual(
+    app.$("#games-empty").textContent,
+    "La recherche ne contient aucun jeu. Modifiez votre recherche.",
+  );
+});
+
 test("adding a game posts the form then reloads the list", async () => {
   const app = await mountApp({
     "GET /games": [catan],

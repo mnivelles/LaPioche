@@ -115,9 +115,63 @@ window.addEventListener("hashchange", refresh);
 
 // --- Jeux ------------------------------------------------------------------
 
+let gameSearchForm = $("#game-search-form");
+let gameSearchApplyButton = $("#game-search-form-apply");
+let gameSearchResetButton = $("#game-search-form-reset");
+
+let {
+  query: queryInput,
+  players: playersInput,
+  maxDuration: maxDurationInput,
+} = gameSearchForm.elements;
+
+let defaultGameQuery = "";
+let defaultGamePlayers = "";
+let defaultGameMaxDuration = "";
+
+let gameSearchFilters = {
+  query: defaultGameQuery,
+  players: defaultGamePlayers,
+  maxDuration: defaultGameMaxDuration,
+};
+
+gameSearchApplyButton.addEventListener("click", applyGameSearchFilters);
+gameSearchResetButton.addEventListener("click", reset);
+queryInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    applyGameSearchFilters();
+  }
+});
+
+function applyGameSearchFilters() {
+  gameSearchFilters = {
+    query: queryInput.value.trim(),
+    players: playersInput.value,
+    maxDuration: maxDurationInput.value,
+  };
+  loadGames();
+}
+
+function reset() {
+  queryInput.value = defaultGameQuery;
+  playersInput.value = defaultGamePlayers;
+  maxDurationInput.value = defaultGameMaxDuration;
+
+  applyGameSearchFilters();
+}
+
 async function loadGames() {
-  const games = await api.listGames();
+  const games = await api.listGames({
+    ...gameSearchFilters,
+  });
   $("#games-empty").hidden = games.length > 0;
+  $("#games-empty").textContent =
+    games.length === 0 &&
+    (gameSearchFilters.query.length !== 0 ||
+      gameSearchFilters.players.length !== 0 ||
+      gameSearchFilters.maxDuration.length !== 0)
+      ? "La recherche ne contient aucun jeu. Modifiez votre recherche."
+      : "La ludothèque ne contient aucun jeu pour le moment. Cliquez sur « Ajouter un jeu » pour créer le premier.";
   $("#games-list").replaceChildren(...games.map(gameCard));
 }
 

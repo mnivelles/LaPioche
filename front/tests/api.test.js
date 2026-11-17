@@ -52,10 +52,110 @@ test("translateError never lets unknown English through", () => {
 
 // --- Games
 
-test("listGames calls GET /games", async () => {
-  const { fetch, calls } = fakeApi({ "GET /games": [] });
-  await withFakeFetch(fetch, () => api.listGames());
-  assertEqual(`${calls[0].method} ${calls[0].path}`, "GET /games");
+test("listGames calls GET /games?q=&players=&maxDuration= with empty search params", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=&players=&maxDuration=": [],
+  });
+  await withFakeFetch(fetch, () => api.listGames({}));
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=&players=&maxDuration=",
+  );
+});
+
+test("listGames with search params", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=a&players=3&maxDuration=35": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      query: "a",
+      players: "3",
+      maxDuration: "35",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=a&players=3&maxDuration=35",
+  );
+});
+
+test("listGames with invalid players search param", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=a&players=&maxDuration=35": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      query: "a",
+      players: "0",
+      maxDuration: "35",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=a&players=&maxDuration=35",
+  );
+});
+
+test("listGames with invalid maxDuration search param", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=a&players=3&maxDuration=": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      query: "a",
+      players: "3",
+      maxDuration: "0",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=a&players=3&maxDuration=",
+  );
+});
+
+test("listGames with untrimmed search params", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=a&players=3&maxDuration=35": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      query: "   a  ",
+      players: " 3  ",
+      maxDuration: "  35 ",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=a&players=3&maxDuration=35",
+  );
+});
+
+test("listGames with invalid players and maxDuration search params", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=a&players=&maxDuration=": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      query: "a",
+      players: "-1",
+      maxDuration: "-7",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=a&players=&maxDuration=",
+  );
 });
 
 test("createGame sends a JSON POST", async () => {
@@ -310,7 +410,7 @@ test("an unreachable server gives a clear message", async () => {
     throw new TypeError("Failed to fetch");
   };
   const error = await expectError(
-    withFakeFetch(unreachable, () => api.listGames()),
+    withFakeFetch(unreachable, () => api.listGames({})),
   );
   assertEqual(error.status, 0);
   assertIncludes(error.message, "Impossible de joindre le serveur");

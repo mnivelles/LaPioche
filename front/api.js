@@ -117,7 +117,27 @@ async function request(method, path, body) {
 }
 
 export const api = {
-  listGames: () => request("GET", "/games"),
+  listGames: ({ query = "", players = "", maxDuration = "" }) => {
+    let queryTrimmed = query.trim();
+    let playersTrimmed = players.trim();
+    let maxDurationTrimmed = maxDuration.trim();
+
+    if (!Number.isInteger(Number(playersTrimmed))) {
+      playersTrimmed = "";
+    } else if (Number(playersTrimmed) < 1) {
+      playersTrimmed = "";
+    }
+
+    if (!Number.isInteger(Number(maxDurationTrimmed))) {
+      maxDurationTrimmed = "";
+    } else if (Number(maxDurationTrimmed) < 1) {
+      maxDurationTrimmed = "";
+    }
+
+    const path = `/games?q=${queryTrimmed}&players=${playersTrimmed}&maxDuration=${maxDurationTrimmed}`;
+
+    return request("GET", path);
+  },
   createGame: (game) => request("POST", "/games", game),
   showGame: (id) => request("GET", `/games/${id}`),
   updateGame: (id, game) => request("PUT", `/games/${id}`, game),
