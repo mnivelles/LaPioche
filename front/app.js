@@ -118,6 +118,9 @@ window.addEventListener("hashchange", refresh);
 let gameSearchForm = $("#game-search-form");
 let gameSearchApplyButton = $("#game-search-form-apply");
 let gameSearchResetButton = $("#game-search-form-reset");
+let gameSearchAvailableSelect = $(
+  "#game-filter-available-container select[name='available']",
+);
 
 let {
   query: queryInput,
@@ -128,11 +131,13 @@ let {
 let defaultGameQuery = "";
 let defaultGamePlayers = "";
 let defaultGameMaxDuration = "";
+let defaultGameAvailable = gameSearchAvailableSelect.value;
 
 let gameSearchFilters = {
   query: defaultGameQuery,
   players: defaultGamePlayers,
   maxDuration: defaultGameMaxDuration,
+  available: defaultGameAvailable,
 };
 
 gameSearchApplyButton.addEventListener("click", applyGameSearchFilters);
@@ -142,12 +147,17 @@ queryInput.addEventListener("keydown", (event) => {
     applyGameSearchFilters();
   }
 });
+gameSearchAvailableSelect.addEventListener("change", async () => {
+  gameSearchFilters.available = gameSearchAvailableSelect.value;
+  await loadGames();
+});
 
 function applyGameSearchFilters() {
   gameSearchFilters = {
     query: queryInput.value.trim(),
     players: playersInput.value,
     maxDuration: maxDurationInput.value,
+    available: gameSearchAvailableSelect.value,
   };
   loadGames();
 }

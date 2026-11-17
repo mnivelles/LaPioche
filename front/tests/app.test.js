@@ -89,7 +89,7 @@ test("with no game, a message invites to add one", async () => {
 test("with a search that returns no items, a message is showed", async () => {
   const app = await mountApp({
     "GET /games": [catan, dixit],
-    "GET /games?q=t&players=4&maxDuration=40": [],
+    "GET /games?q=t&players=4&maxDuration=40&available=": [],
   });
 
   await waitFor(
@@ -114,6 +114,121 @@ test("with a search that returns no items, a message is showed", async () => {
     app.$("#games-empty").textContent,
     "La recherche ne contient aucun jeu. Modifiez votre recherche.",
   );
+});
+
+test("list games changes when available param becomes true", async () => {
+  const app = await mountApp({
+    "GET /games": [catan, dixit],
+    "GET /games?q=&players=&maxDuration=&available=": [catan, dixit],
+    "GET /games?q=&players=&maxDuration=&available=true": [dixit],
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "les deux jeux sont affichés",
+  );
+  assertTrue(app.$("#games-empty").hidden);
+
+  const availableSelect = app.$(
+    "#game-filter-available-container select[name='available']",
+  );
+  availableSelect.value = "all";
+  availableSelect.dispatchEvent(new app.win.Event("change", { bubbles: true }));
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "la liste a deux éléments",
+  );
+
+  assertEqual(app.$$("#games-list .card").length, 2);
+
+  availableSelect.value = "available";
+  availableSelect.dispatchEvent(new app.win.Event("change", { bubbles: true }));
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 1,
+    "la liste a un élément",
+  );
+
+  assertEqual(app.$("#games-list .card h3").textContent, "Dixit");
+
+  assertEqual(app.$$("#games-list .card").length, 1);
+});
+
+test("list games changes when available param becomes false", async () => {
+  const app = await mountApp({
+    "GET /games": [catan, dixit],
+    "GET /games?q=&players=&maxDuration=&available=": [catan, dixit],
+    "GET /games?q=&players=&maxDuration=&available=false": [catan],
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "les deux jeux sont affichés",
+  );
+  assertTrue(app.$("#games-empty").hidden);
+
+  const availableSelect = app.$(
+    "#game-filter-available-container select[name='available']",
+  );
+  availableSelect.value = "all";
+  availableSelect.dispatchEvent(new app.win.Event("change", { bubbles: true }));
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "la liste a deux éléments",
+  );
+
+  assertEqual(app.$$("#games-list .card").length, 2);
+
+  availableSelect.value = "unavailable";
+  availableSelect.dispatchEvent(new app.win.Event("change", { bubbles: true }));
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 1,
+    "la liste a un élément",
+  );
+
+  assertEqual(app.$("#games-list .card h3").textContent, "Catan");
+
+  assertEqual(app.$$("#games-list .card").length, 1);
+});
+
+test("list games changes when available param becomes empty", async () => {
+  const app = await mountApp({
+    "GET /games": [catan, dixit],
+    "GET /games?q=&players=&maxDuration=&available=true": [dixit],
+    "GET /games?q=&players=&maxDuration=&available=": [catan, dixit],
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "les deux jeux sont affichés",
+  );
+  assertTrue(app.$("#games-empty").hidden);
+
+  const availableSelect = app.$(
+    "#game-filter-available-container select[name='available']",
+  );
+  availableSelect.value = "available";
+  availableSelect.dispatchEvent(new app.win.Event("change", { bubbles: true }));
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 1,
+    "la liste a deux éléments",
+  );
+
+  assertEqual(app.$$("#games-list .card").length, 1);
+
+  availableSelect.value = "all";
+  availableSelect.dispatchEvent(new app.win.Event("change", { bubbles: true }));
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "la liste a un élément",
+  );
+
+  assertEqual(app.$$("#games-list .card").length, 2);
 });
 
 test("adding a game posts the form then reloads the list", async () => {

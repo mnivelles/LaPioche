@@ -54,18 +54,18 @@ test("translateError never lets unknown English through", () => {
 
 test("listGames calls GET /games?q=&players=&maxDuration= with empty search params", async () => {
   const { fetch, calls } = fakeApi({
-    "GET /games?q=&players=&maxDuration=": [],
+    "GET /games?q=&players=&maxDuration=&available=": [],
   });
   await withFakeFetch(fetch, () => api.listGames({}));
   assertEqual(
     `${calls[0].method} ${calls[0].path}${calls[0].search}`,
-    "GET /games?q=&players=&maxDuration=",
+    "GET /games?q=&players=&maxDuration=&available=",
   );
 });
 
 test("listGames with search params", async () => {
   const { fetch, calls } = fakeApi({
-    "GET /games?q=a&players=3&maxDuration=35": [],
+    "GET /games?q=a&players=3&maxDuration=35&available=": [],
   });
 
   await withFakeFetch(fetch, () =>
@@ -78,13 +78,13 @@ test("listGames with search params", async () => {
 
   assertEqual(
     `${calls[0].method} ${calls[0].path}${calls[0].search}`,
-    "GET /games?q=a&players=3&maxDuration=35",
+    "GET /games?q=a&players=3&maxDuration=35&available=",
   );
 });
 
 test("listGames with invalid players search param", async () => {
   const { fetch, calls } = fakeApi({
-    "GET /games?q=a&players=&maxDuration=35": [],
+    "GET /games?q=a&players=&maxDuration=35&available=": [],
   });
 
   await withFakeFetch(fetch, () =>
@@ -97,13 +97,13 @@ test("listGames with invalid players search param", async () => {
 
   assertEqual(
     `${calls[0].method} ${calls[0].path}${calls[0].search}`,
-    "GET /games?q=a&players=&maxDuration=35",
+    "GET /games?q=a&players=&maxDuration=35&available=",
   );
 });
 
 test("listGames with invalid maxDuration search param", async () => {
   const { fetch, calls } = fakeApi({
-    "GET /games?q=a&players=3&maxDuration=": [],
+    "GET /games?q=a&players=3&maxDuration=&available=": [],
   });
 
   await withFakeFetch(fetch, () =>
@@ -116,13 +116,13 @@ test("listGames with invalid maxDuration search param", async () => {
 
   assertEqual(
     `${calls[0].method} ${calls[0].path}${calls[0].search}`,
-    "GET /games?q=a&players=3&maxDuration=",
+    "GET /games?q=a&players=3&maxDuration=&available=",
   );
 });
 
 test("listGames with untrimmed search params", async () => {
   const { fetch, calls } = fakeApi({
-    "GET /games?q=a&players=3&maxDuration=35": [],
+    "GET /games?q=a&players=3&maxDuration=35&available=": [],
   });
 
   await withFakeFetch(fetch, () =>
@@ -135,13 +135,13 @@ test("listGames with untrimmed search params", async () => {
 
   assertEqual(
     `${calls[0].method} ${calls[0].path}${calls[0].search}`,
-    "GET /games?q=a&players=3&maxDuration=35",
+    "GET /games?q=a&players=3&maxDuration=35&available=",
   );
 });
 
 test("listGames with invalid players and maxDuration search params", async () => {
   const { fetch, calls } = fakeApi({
-    "GET /games?q=a&players=&maxDuration=": [],
+    "GET /games?q=a&players=&maxDuration=&available=": [],
   });
 
   await withFakeFetch(fetch, () =>
@@ -154,7 +154,78 @@ test("listGames with invalid players and maxDuration search params", async () =>
 
   assertEqual(
     `${calls[0].method} ${calls[0].path}${calls[0].search}`,
-    "GET /games?q=a&players=&maxDuration=",
+    "GET /games?q=a&players=&maxDuration=&available=",
+  );
+});
+
+test("listGames with available param", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=&players=&maxDuration=&available=true": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      available: "available",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=&players=&maxDuration=&available=true",
+  );
+});
+
+test("listGames with available param and search params", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=an&players=5&maxDuration=40&available=true": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      query: "an",
+      players: "5",
+      maxDuration: "40",
+      available: "available",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=an&players=5&maxDuration=40&available=true",
+  );
+});
+
+test("listGames with unavailable param", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=&players=&maxDuration=&available=false": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      available: "unavailable",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=&players=&maxDuration=&available=false",
+  );
+});
+
+test("listGames with all available param", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=&players=&maxDuration=&available=": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      available: "all",
+    }),
+  );
+
+  assertEqual(
+    `${calls[0].method} ${calls[0].path}${calls[0].search}`,
+    "GET /games?q=&players=&maxDuration=&available=",
   );
 });
 

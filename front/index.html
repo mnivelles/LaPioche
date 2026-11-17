@@ -50,6 +50,15 @@
             <button id="game-search-form-reset" type="button">Reset</button>
           </form>
         </div>
+
+        <div class="section-filters" id="game-filter-available-container">
+          <select name="available">
+            <option value="all">Tous</option>
+            <option value="available">Disponibles uniquement</option>
+            <option value="unavailable">Indisponibles uniquement</option>
+          </select>
+        </div>
+
         <p id="games-empty" class="empty" hidden></p>
         <ul id="games-list" class="cards"></ul>
       </section>

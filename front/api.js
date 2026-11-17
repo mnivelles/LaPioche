@@ -117,10 +117,16 @@ async function request(method, path, body) {
 }
 
 export const api = {
-  listGames: ({ query = "", players = "", maxDuration = "" }) => {
+  listGames: ({
+    query = "",
+    players = "",
+    maxDuration = "",
+    available = "all",
+  }) => {
     let queryTrimmed = query.trim();
     let playersTrimmed = players.trim();
     let maxDurationTrimmed = maxDuration.trim();
+    let availableTrimmed = available.trim();
 
     if (!Number.isInteger(Number(playersTrimmed))) {
       playersTrimmed = "";
@@ -134,7 +140,16 @@ export const api = {
       maxDurationTrimmed = "";
     }
 
-    const path = `/games?q=${queryTrimmed}&players=${playersTrimmed}&maxDuration=${maxDurationTrimmed}`;
+    let availableParam = "";
+    if (availableTrimmed === "available") {
+      availableParam = "true";
+    } else if (availableTrimmed === "unavailable") {
+      availableParam = "false";
+    } else {
+      availableParam = "";
+    }
+
+    const path = `/games?q=${queryTrimmed}&players=${playersTrimmed}&maxDuration=${maxDurationTrimmed}&available=${availableParam}`;
 
     return request("GET", path);
   },
