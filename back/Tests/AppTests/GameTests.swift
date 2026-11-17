@@ -190,7 +190,162 @@ final class GameTests: XCTestCase {
             })
         }
     }
+    
+    func testListGamesAvailable() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            
+            _ = try await createGame(app, title: "Catan", minPlayers: 2, maxPlayers: 10, durationMinutes: 30)
+            _ = try await createGame(app, title: "Dixit", minPlayers: 3, maxPlayers: 8, durationMinutes: 40)
+            let gameA = try await createGame(app, title: "Modit", minPlayers: 4, maxPlayers: 8, durationMinutes: 60)
+            _ = try await createGame(app, title: "Luxuous", minPlayers: 4, maxPlayers: 10, durationMinutes: 20)
+            _ = try await createGame(app, title: "Clarem", minPlayers: 3, maxPlayers: 7, durationMinutes: 90)
+            let gameB = try await createGame(app, title: "Partem", minPlayers: 2, maxPlayers: 2, durationMinutes: 25)
+            let gameC = try await createGame(app, title: "Anamor", minPlayers: 4, maxPlayers: 12, durationMinutes: 90)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameA.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameB.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameC.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture,
+                                 returnedAt: .now)
+            
+            try await app.test(.GET, "games?available=true", afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode([GameDTO].self).count, 5)
+            })
+        }
+    }
 
+    func testListGamesNotAvailable() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            
+            _ = try await createGame(app, title: "Catan", minPlayers: 2, maxPlayers: 10, durationMinutes: 30)
+            _ = try await createGame(app, title: "Dixit", minPlayers: 3, maxPlayers: 8, durationMinutes: 40)
+            let gameA = try await createGame(app, title: "Modit", minPlayers: 4, maxPlayers: 8, durationMinutes: 60)
+            _ = try await createGame(app, title: "Luxuous", minPlayers: 4, maxPlayers: 10, durationMinutes: 20)
+            _ = try await createGame(app, title: "Clarem", minPlayers: 3, maxPlayers: 7, durationMinutes: 90)
+            let gameB = try await createGame(app, title: "Partem", minPlayers: 2, maxPlayers: 2, durationMinutes: 25)
+            let gameC = try await createGame(app, title: "Anamor", minPlayers: 4, maxPlayers: 12, durationMinutes: 90)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameA.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameB.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameC.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture,
+                                 returnedAt: .now)
+            
+            try await app.test(.GET, "games?available=false", afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                XCTAssertEqual(try res.content.decode([GameDTO].self).count, 2)
+            })
+        }
+    }
+    
+    func testListGamesWithInvalidAvailable() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            
+            _ = try await createGame(app, title: "Catan", minPlayers: 2, maxPlayers: 10, durationMinutes: 30)
+            _ = try await createGame(app, title: "Dixit", minPlayers: 3, maxPlayers: 8, durationMinutes: 40)
+            let gameA = try await createGame(app, title: "Modit", minPlayers: 4, maxPlayers: 8, durationMinutes: 60)
+            _ = try await createGame(app, title: "Luxuous", minPlayers: 4, maxPlayers: 10, durationMinutes: 20)
+            _ = try await createGame(app, title: "Clarem", minPlayers: 3, maxPlayers: 7, durationMinutes: 90)
+            let gameB = try await createGame(app, title: "Partem", minPlayers: 2, maxPlayers: 2, durationMinutes: 25)
+            let gameC = try await createGame(app, title: "Anamor", minPlayers: 4, maxPlayers: 12, durationMinutes: 90)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameA.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameB.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameC.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture,
+                                 returnedAt: .now)
+            
+            try await app.test(.GET, "games?available=17b", afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .badRequest)
+            })
+        }
+    }
+
+    func testListGamesWithAvailableAndSearchParams() async throws {
+        try await withApp { app in
+            let member = try await createMember(app)
+            
+            _ = try await createGame(app, title: "Catan", minPlayers: 2, maxPlayers: 10, durationMinutes: 30)
+            _ = try await createGame(app, title: "Dixit", minPlayers: 3, maxPlayers: 8, durationMinutes: 40)
+            let gameA = try await createGame(app, title: "Modit", minPlayers: 4, maxPlayers: 8, durationMinutes: 60)
+            _ = try await createGame(app, title: "Luxuous", minPlayers: 4, maxPlayers: 10, durationMinutes: 20)
+            _ = try await createGame(app, title: "Clarem", minPlayers: 3, maxPlayers: 7, durationMinutes: 90)
+            let gameB = try await createGame(app, title: "Partem", minPlayers: 2, maxPlayers: 2, durationMinutes: 25)
+            let gameC = try await createGame(app, title: "Anamor", minPlayers: 4, maxPlayers: 12, durationMinutes: 90)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameA.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameB.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture)
+            
+            try await insertLoan(app,
+                                 gameID: try XCTUnwrap(gameC.id),
+                                 memberID: try XCTUnwrap(member.id),
+                                 borrowedAt: .distantPast,
+                                 dueAt: .distantFuture,
+                                 returnedAt: .now)
+            
+            try await app.test(.GET, "games?q=t&players=2&maxDuration=40&available=true", afterResponse: { res async throws in
+                XCTAssertEqual(res.status, .ok)
+                
+                let output = try res.content.decode([GameDTO].self)
+                
+                XCTAssertEqual(output.count, 1)
+                XCTAssertEqual(output.first?.title, "Catan")
+            })
+        }
+    }
+    
     func testShowGame() async throws {
         try await withApp { app in
             let game = try await createGame(app)

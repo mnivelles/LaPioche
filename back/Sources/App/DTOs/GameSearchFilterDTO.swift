@@ -4,11 +4,13 @@ struct GameSearchFilterDTO: Content {
     let q: String?
     let players: Int?
     let maxDuration: Int?
+    let available: Bool?
     
     enum CodingKeys: String, CodingKey {
         case q
         case players
         case maxDuration
+        case available
     }
     
     init(from decoder: Decoder) throws {
@@ -17,6 +19,7 @@ struct GameSearchFilterDTO: Content {
         q = try container.decodeIfPresent(String.self, forKey: .q)
         players = try Self.positiveInt(container, .players)
         maxDuration = try Self.positiveInt(container, .maxDuration)
+        available = try container.decodeIfPresent(Bool.self, forKey: .available)
     }
     
     private static func positiveInt(

@@ -38,7 +38,13 @@ struct GameController: RouteCollection {
                 .filter(\.$durationMinutes <= maxDuration)
         }
         
-        let games = try await query.all()
+        var games = try await query.all()
+        
+        if let available = input.available {
+            games = games.filter {
+                $0.isAvailable == available
+            }
+        }
         
         return games.map { $0.toDTO() }
     }
