@@ -36,7 +36,11 @@ function button(label, onClick, className = "") {
 }
 
 function toast(message, isError = false) {
-  const node = el("p", { class: isError ? "toast error" : "toast" }, message);
+  const node = el(
+    "div",
+    { class: isError ? "alert theme-danger" : "alert" },
+    el("p", { class: "" }, message),
+  );
   $("#toasts").append(node);
   setTimeout(() => node.remove(), 5000);
 }
@@ -95,6 +99,7 @@ async function refresh() {
   for (const name of tabs) {
     $(`#${name}`).hidden = name !== tab;
     $(`[data-tab="${name}"]`).toggleAttribute("aria-current", name === tab);
+    $(`[data-tab="${name}"]`).classList.toggle("active", name === tab);
   }
   if (tab === "games") {
     await run(() => {
@@ -193,35 +198,67 @@ function gameCard(game) {
       ? `${game.minPlayers}`
       : `${game.minPlayers} à ${game.maxPlayers}`;
   const status = game.isAvailable
-    ? el("span", { class: "badge ok" }, "Disponible")
+    ? el("span", { class: "badge theme-success" }, "Disponible")
     : isOverdue
-      ? el("span", { class: "badge late" }, "Emprunté [retard]")
-      : el("span", { class: "badge busy" }, "Emprunté");
+      ? el("span", { class: "badge theme-danger" }, "Emprunté [retard]")
+      : el("span", { class: "badge theme-warning" }, "Emprunté");
 
-  const actions = el("div", { class: "actions" });
+  const actions = el("div", { class: "card-footer d-flex gap-3" });
 
-  actions.append(button("Modifier", () => openGameUpdateDialog(game)));
+  actions.append(
+    button(
+      "Modifier",
+      () => openGameUpdateDialog(game),
+      "theme-primary btn-subtle btn-sm flex-fill",
+    ),
+  );
 
   if (game.isAvailable) {
     actions.append(
-      button("Emprunter", () => openBorrowDialog(game), "primary"),
+      button(
+        "Emprunter",
+        () => openBorrowDialog(game),
+        "theme-success btn-subtle btn-sm flex-fill",
+      ),
     );
   } else {
-    actions.append(button("Rendre", () => openReturnGameDialog(game)));
+    actions.append(
+      button(
+        "Rendre",
+        () => openReturnGameDialog(game),
+        "theme-warning btn-subtle btn-sm flex-fill",
+      ),
+    );
   }
 
   actions.append(
-    button("Supprimer", () => openGameDeleteDialog(game), "danger"),
+    button(
+      "Supprimer",
+      () => openGameDeleteDialog(game),
+      "theme-danger btn-solid btn-sm flex-fill",
+    ),
   );
 
   return el(
-    "li",
+    "div",
     { class: "card" },
-    el("div", { class: "card-head" }, el("h3", {}, game.title), status),
     el(
-      "p",
-      { class: "meta" },
-      `${players} joueur·ses · ${game.durationMinutes} min`,
+      "div",
+      {
+        class:
+          "card-header d-flex flex-row justify-content-between align-items-center",
+      },
+      el("h4", { class: "card-title" }, game.title),
+      status,
+    ),
+    el(
+      "div",
+      { class: "card-body" },
+      el(
+        "p",
+        { class: "card-text" },
+        `${players} joueur·ses · ${game.durationMinutes} min`,
+      ),
     ),
     actions,
   );
@@ -318,7 +355,7 @@ async function loadOverdueLoans(isOnPage = true) {
 
       $("#overdue-loans-empty").hidden = loans.length > 0;
 
-      const cards = await Promise.all(loans.map(overdueLoanRow));
+      const cards = await Promise.all(loans.map(overdueLoanCard));
       $("#overdue-loans-list").replaceChildren(...cards);
     }
   } catch {
@@ -329,11 +366,15 @@ async function loadOverdueLoans(isOnPage = true) {
   }
 }
 
-async function overdueLoanRow(loan) {
+async function overdueLoanCard(loan) {
   const game = await api.showGame(loan.gameID);
   const member = await api.showMember(loan.memberID);
 
-  const gameTitle = el("h3", { class: "gameTitle" }, game.title);
+  const gameTitle = el(
+    "div",
+    { class: "card-header" },
+    el("h4", { class: "card-title" }, game.title),
+  );
   const memberName = labelContentEl("Adhérent·e :", member.name);
   const dueAt = labelContentEl("Retour prévu :", formatDateTime(loan.dueAt));
 
@@ -345,7 +386,18 @@ async function overdueLoanRow(loan) {
     `${diffDays} ${diffDays > 1 ? "jours" : "jour"}`,
   );
 
-  return el("li", { class: "card" }, gameTitle, memberName, dueAt, overdueDate);
+  return el(
+    "div",
+    { class: "card" },
+    gameTitle,
+    el(
+      "div",
+      { class: "card-body" },
+      el("p", { class: "card-text" }, memberName),
+      el("p", { class: "card-text" }, dueAt),
+      el("p", { class: "card-text" }, overdueDate),
+    ),
+  );
 }
 
 const borrowDialog = $("#borrow-dialog");
@@ -419,15 +471,19 @@ async function openMemberLoansDialog(member) {
 
 async function loadLoansOf(memberID) {
   const loans = await api.listLoansOfMember(memberID);
-  const rows = await Promise.all(loans.map(memberLoanRow));
+  const cards = await Promise.all(loans.map(memberLoanCard));
   $("#member-loans-empty").hidden = loans.length > 0;
-  $("#member-loans-list").replaceChildren(...rows);
+  $("#member-loans-list").replaceChildren(...cards);
 }
 
-async function memberLoanRow(loan) {
+async function memberLoanCard(loan) {
   const game = await api.showGame(loan.gameID);
 
-  const gameTitle = el("h3", { class: "gameTitle" }, game.title);
+  const gameTitle = el(
+    "div",
+    { class: "card-header" },
+    el("h4", { class: "card-title" }, game.title),
+  );
   const borrowedAt = labelContentEl(
     "Date d'emprunts :",
     formatDateTime(loan.borrowedAt),
@@ -442,14 +498,30 @@ async function memberLoanRow(loan) {
 
   const state = labelContentEl("État :", loanState);
 
-  return el("li", { class: "loanRow" }, gameTitle, borrowedAt, dueAt, state);
+  return el(
+    "div",
+    { class: "card" },
+    gameTitle,
+    el(
+      "div",
+      { class: "card-body" },
+      el("p", { class: "card-text" }, borrowedAt),
+      el("p", { class: "card-text" }, dueAt),
+      el("p", { class: "card-text" }, state),
+    ),
+  );
 }
 
 function labelContentEl(label, content) {
-  const labelEl = el("span", { class: "label" }, label);
-  const contentEl = el("span", { class: "content" }, content);
+  const labelEl = el("span", { class: "fw-semibold" }, label);
+  const contentEl = el("span", { class: "text-end" }, content);
 
-  return el("div", { class: "labelContent" }, labelEl, contentEl);
+  return el(
+    "div",
+    { class: "d-flex flex-row justify-content-between gap-2" },
+    labelEl,
+    contentEl,
+  );
 }
 
 // --- Adhérent·es -----------------------------------------------------------
@@ -457,27 +529,49 @@ function labelContentEl(label, content) {
 async function loadMembers() {
   const members = await api.listMembers();
   $("#members-empty").hidden = members.length > 0;
-  $("#members-list").replaceChildren(...members.map(memberRow));
+  $("#members-list").replaceChildren(...members.map(memberCard));
 }
 
-function memberRow(member) {
-  const actions = el("div", { class: "actions" });
+function memberCard(member) {
+  const actions = el("div", { class: "card-footer d-flex gap-3" });
 
-  actions.append(button("Emprunts", () => openMemberLoansDialog(member)));
-
-  actions.append(button("Modifier", () => openMemberUpdateDialog(member)));
   actions.append(
-    button("Supprimer", () => openMemberDeleteDialog(member), "danger"),
+    button(
+      "Emprunts",
+      () => openMemberLoansDialog(member),
+      "theme-accent btn-subtle btn-sm flex-fill",
+    ),
+  );
+
+  actions.append(
+    button(
+      "Modifier",
+      () => openMemberUpdateDialog(member),
+      "theme-primary btn-subtle btn-sm flex-fill",
+    ),
+  );
+  actions.append(
+    button(
+      "Supprimer",
+      () => openMemberDeleteDialog(member),
+      "theme-danger btn-solid btn-sm flex-fill",
+    ),
   );
 
   return el(
-    "li",
-    { class: "row" },
+    "div",
+    { class: "card" },
     el(
       "div",
-      { class: "row-main" },
-      el("p", {}, el("strong", {}, member.name)),
-      el("p", { class: "meta" }, member.email),
+      {
+        class: "card-header",
+      },
+      el("h4", { class: "card-title" }, member.name),
+    ),
+    el(
+      "div",
+      { class: "card-body" },
+      el("p", { class: "card-text" }, member.email),
     ),
     actions,
   );
